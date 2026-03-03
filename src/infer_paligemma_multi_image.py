@@ -1,0 +1,90 @@
+import json
+from pathlib import Path
+from PIL import Image
+import torch
+from tqdm import tqdm
+import pandas as pd
+
+from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
+from peft import PeftModel
+
+from src.prompts import BINARY_PROMPT
+from src.utils_io import read_jsonl, write_predictions_csv, write_json
+from src.utils_metrics import compute_binary_metrics
+
+@torch.no_grad()
+def prob_yes_single(model, processor, text, image, device, max_text_len=512):
+    prompt = BINARY_PROMPT.format(text=text)
+    inputs = processor(
+        text=[prompt],
+        images=[image],
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=max_text_len,
+    ).to(device)
+
+    out = model(**inputs)
+    yes_id = processor.tokenizer("YES", add_special_tokens=False)["input_ids"][0]
+    last_logits = out.logits[:, -1, :]
+    probs = torch.softmax(last_logits, dim=-1)
+    return float(probs[0, yes_id].detach().cpu())
+
+def main(
+    dataset_path="data/apps.jsonl",
+    split_path="data/splits/fold_0.json",
+    base_model="google/paligemma-3b-pt-224",
+    lora_path="runs/paligemma_single_image/fold_0/lora_adapter",
+    out_path="runs/paligemma_multi_image/fold_0/predictions.csv",
+    pooling="max",
+):
+    rows = read_jsonl(dataset_path)
+    with open(split_path, "r", encoding="utf-8") as f:
+        split = json.load(f)
+    test_ids = set(split["test_ids"])
+    test_rows = [r for r in rows if r["app_id"] in test_ids]
+
+    processor = AutoProcessor.from_pretrained(base_model)
+    model = PaliGemmaForConditionalGeneration.from_pretrained(
+        base_model, torch_dtype=torch.bfloat16, device_map="auto"
+    )
+    model = PeftModel.from_pretrained(model, lora_path)
+    model.eval()
+    device = next(model.parameters()).device
+
+    pred_rows = []
+    y_true, y_prob = [], []
+
+    for r in tqdm(test_rows, desc="multi-image infer"):
+        probs = []
+        for img_path in r["image_paths"]:
+            image = Image.open(img_path).convert("RGB")
+            p = prob_yes_single(model, processor, r["text"], image, device)
+            probs.append(p)
+
+        if pooling == "max":
+            p_app = max(probs) if probs else 0.0
+        elif pooling == "mean":
+            p_app = sum(probs) / max(len(probs), 1)
+        else:
+            raise ValueError(pooling)
+
+        y_true.append(int(r["label_binary"]))
+        y_prob.append(float(p_app))
+        pred_rows.append({
+            "app_id": r["app_id"],
+            "y_true": int(r["label_binary"]),
+            "y_prob_yes": float(p_app),
+            "pooling": pooling,
+            "max_image_prob": max(probs) if probs else None,
+            "mean_image_prob": (sum(probs)/len(probs)) if probs else None,
+        })
+
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    write_predictions_csv(out_path, pred_rows)
+    metrics = compute_binary_metrics(y_true, y_prob, threshold=0.5)
+    write_json(str(Path(out_path).with_suffix(".metrics.json")), metrics)
+    print(metrics)
+
+if __name__ == "__main__":
+    main()
