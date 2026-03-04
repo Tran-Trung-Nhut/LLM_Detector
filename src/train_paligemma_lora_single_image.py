@@ -39,8 +39,12 @@ def collate_fn(processor, batch, max_text_len):
     prompts = [BINARY_PROMPT.format(text=b["text"]) for b in batch]
     targets = ["YES" if b["label_binary"] == 1 else "NO" for b in batch]
 
+    # Create full text: prompt + target
+    full_texts = [p + t for p, t in zip(prompts, targets)]
+
+    # Process full text with images
     model_inputs = processor(
-        text=prompts,
+        text=full_texts,
         images=images,
         return_tensors="pt",
         padding=True,
@@ -48,15 +52,20 @@ def collate_fn(processor, batch, max_text_len):
         max_length=max_text_len,
     )
 
-    labels = processor.tokenizer(
-        text=targets,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        max_length=8,
-    )["input_ids"]
+    labels = model_inputs["input_ids"].clone()
 
+    for i, target in enumerate(targets):
+        target_ids = processor.tokenizer(target, add_special_tokens=False)["input_ids"]
+        target_len = len(target_ids)
+
+        seq_len = (labels[i] != processor.tokenizer.pad_token_id).sum().item()
+
+        if seq_len > target_len:
+            labels[i, :seq_len - target_len] = -100
+
+    # Mask padding tokens
     labels[labels == processor.tokenizer.pad_token_id] = -100
+
     model_inputs["labels"] = labels
     meta = [{"app_id": b["app_id"], "y": b["label_binary"]} for b in batch]
     return model_inputs, meta
