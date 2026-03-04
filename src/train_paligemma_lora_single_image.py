@@ -1,4 +1,3 @@
-import os
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,9 +9,9 @@ from tqdm import tqdm
 from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
 from peft import LoraConfig, get_peft_model
 
-from src.utils_seed import set_seed
-from src.utils_io import read_jsonl, write_json, write_predictions_csv
-from src.utils_metrics import compute_binary_metrics
+from src.utils.seed import set_seed
+from io import read_jsonl, write_json, write_predictions_csv
+from src.utils.metrics import compute_binary_metrics
 from src.dataset_apps import AppsSingleImageDataset
 from src.prompts import BINARY_PROMPT
 

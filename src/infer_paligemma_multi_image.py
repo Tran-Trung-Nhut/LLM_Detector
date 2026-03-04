@@ -3,14 +3,13 @@ from pathlib import Path
 from PIL import Image
 import torch
 from tqdm import tqdm
-import pandas as pd
 
 from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
 from peft import PeftModel
 
 from src.prompts import BINARY_PROMPT
-from src.utils_io import read_jsonl, write_predictions_csv, write_json
-from src.utils_metrics import compute_binary_metrics
+from io import read_jsonl, write_predictions_csv, write_json
+from src.utils.metrics import compute_binary_metrics
 
 @torch.no_grad()
 def prob_yes_single(model, processor, text, image, device, max_text_len=512):
