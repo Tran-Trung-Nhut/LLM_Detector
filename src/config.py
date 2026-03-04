@@ -30,7 +30,7 @@ class Config:
     grad_accum: int = 16
     lr: float = 2e-4
     weight_decay: float = 0.0
-    max_text_len: int = 512
+    max_text_len: int = 1024 + 512
 
     # Which single image to pick per app during training/eval:
     # - "best": OCR-based if available, else middle image
