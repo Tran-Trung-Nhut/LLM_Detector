@@ -19,11 +19,17 @@ from config import CFG
 def _splits_exist() -> bool:
     return all(Path(CFG.splits_dir, f"fold_{i}.json").exists() for i in range(CFG.n_folds))
 
+def _dataset_exists() -> bool:
+    return Path(CFG.dataset_path).exists()
+
 def main():
 
     if CFG.hf_token:
         print("[INFO] Logging in to Hugging Face...")
         login(token=CFG.hf_token)
+
+    if not _dataset_exists():
+        os.system("python -m src.preprocessing")
 
     if not _splits_exist():
         os.system("python -m src.make_splits")
