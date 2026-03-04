@@ -48,14 +48,13 @@ def collate_fn(processor, batch, max_text_len):
         max_length=max_text_len,
     )
 
-    with processor.as_target_processor():
-        labels = processor(
-            text=targets,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=8,
-        )["input_ids"]
+    labels = processor.tokenizer(
+        text=targets,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=8,
+    )["input_ids"]
 
     labels[labels == processor.tokenizer.pad_token_id] = -100
     model_inputs["labels"] = labels
