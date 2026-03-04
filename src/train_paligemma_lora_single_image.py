@@ -12,7 +12,7 @@ from peft import LoraConfig, get_peft_model
 from src.config import CFG
 from src.dataset_apps import AppsSingleImageDataset
 from src.prompts import BINARY_PROMPT
-from src.tils.seed import set_seed
+from src.utils.seed import set_seed
 from src.utils.io import read_jsonl, write_json, write_predictions_csv
 from src.utils.metrics import compute_binary_metrics
 
