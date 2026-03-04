@@ -43,6 +43,45 @@ def clean_html(text):
     return text
 
 
+# Patterns for low-signal content removal
+LOW_SIGNAL_PATTERNS = [
+    # URLs and emails
+    r"https?://[^\s]+",
+    r"www\.[^\s]+",
+    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    # Social media handles
+    r"@[a-zA-Z0-9_]+",
+    # Boilerplate section headers (case insensitive, match whole line/paragraph)
+    r"(?i)^[\s\-•*]*privacy\s*policy[:\s]*.*$",
+    r"(?i)^[\s\-•*]*terms\s*(of\s*(use|service))?[:\s]*.*$",
+    r"(?i)^[\s\-•*]*contact\s*us[:\s]*.*$",
+    r"(?i)^[\s\-•*]*follow\s*us[:\s]*.*$",
+    r"(?i)^[\s\-•*]*connect\s*with\s*us[:\s]*.*$",
+    r"(?i)^[\s\-•*]*subscriptions?[:\s]*.*$",
+    r"(?i)^[\s\-•*]*(need\s*)?help\s*(\?|&\s*support)?[:\s]*.*$",
+    r"(?i)^[\s\-•*]*support[:\s]*.*$",
+    r"(?i)^[\s\-•*]*feedback[:\s]*.*$",
+    r"(?i)^[\s\-•*]*more\s*about\s*.*$",
+    r"(?i)^[\s\-•*]*visit\s*(us|our\s*website)[:\s]*.*$",
+    # Common footer phrases
+    r"(?i)rate\s*us\s*(and\s*)?(write\s*a\s*)?review.*",
+    r"(?i)give\s*us\s*\d+\s*stars?.*",
+    r"(?i)⭐+.*",
+    r"(?i)don'?t\s*forget\s*to\s*(rate|review).*",
+]
+
+
+def remove_low_signal(text):
+    """
+    Remove URLs, emails, and boilerplate sections that add length but little signal.
+    """
+    if not text:
+        return ""
+    for pat in LOW_SIGNAL_PATTERNS:
+        text = re.sub(pat, "", text, flags=re.MULTILINE)
+    return text
+
+
 def normalize_whitespace(text):
     """
     Normalize whitespace in text
@@ -57,11 +96,14 @@ def normalize_whitespace(text):
 
 def clean_text(text):
     """
-    Clean text - remove HTML and normalize whitespace
+    Clean text - remove HTML, low-signal content, and normalize whitespace
     """
     if not text:
         return ""
-    return normalize_whitespace(clean_html(text))
+    text = clean_html(text)
+    text = remove_low_signal(text)
+    text = normalize_whitespace(text)
+    return text
 
 
 def build_app_text(record: dict, include_recent_changes: bool = True) -> str:
@@ -103,6 +145,8 @@ def main():
         "images_after": 0,
         "cleaned_fields": 0,
         "text_built": 0,
+        "chars_before": 0,
+        "chars_after": 0,
     }
 
     text_fields = ["description", "short_description", "recent_changes_text", "title", "category"]
@@ -117,7 +161,9 @@ def main():
             for field in text_fields:
                 if field in record and record[field]:
                     original = record[field]
+                    stats["chars_before"] += len(original)
                     cleaned = clean_text(original)
+                    stats["chars_after"] += len(cleaned)
                     if original != cleaned:
                         stats["cleaned_fields"] += 1
                     record[field] = cleaned
@@ -138,6 +184,9 @@ def main():
     print(f"  Tổng số apps: {stats['total']}")
     print(f"  Text fields cleaned: {stats['cleaned_fields']}")
     print(f"  Text built: {stats['text_built']}")
+    print(f"  Chars before: {stats['chars_before']:,}")
+    print(f"  Chars after: {stats['chars_after']:,}")
+    print(f"  Chars removed: {stats['chars_before'] - stats['chars_after']:,} ({100*(stats['chars_before'] - stats['chars_after'])/max(stats['chars_before'],1):.1f}%)")
     print(f"  Images before: {stats['images_before']}")
     print(f"  Images after: {stats['images_after']}")
     print(f"  Images removed: {stats['images_before'] - stats['images_after']}")
