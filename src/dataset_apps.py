@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import random
 from PIL import Image
-from keywords import KEYWORDS
+from src.keywords import KEYWORDS
 
 class AppsSingleImageDataset:
     def __init__(self, rows, image_strategy="best", seed=42):

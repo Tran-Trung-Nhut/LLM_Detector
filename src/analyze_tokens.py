@@ -4,8 +4,8 @@ Usage: python -m src.analyze_tokens
 """
 import json
 from transformers import AutoProcessor
-from config import CFG
-from prompts import BINARY_PROMPT
+from src.config import CFG
+from src.prompts import BINARY_PROMPT
 
 
 def main():

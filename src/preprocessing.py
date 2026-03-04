@@ -10,8 +10,7 @@ from pathlib import Path
 from PIL import Image
 import imagehash
 from html import unescape
-from datetime import datetime
-from config import CFG
+from src.config import CFG
 
 
 def dedup_image_paths(image_paths, max_dist=4):

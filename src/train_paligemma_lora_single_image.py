@@ -9,12 +9,12 @@ from tqdm import tqdm
 from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
 from peft import LoraConfig, get_peft_model
 
-from config import CFG
-from dataset_apps import AppsSingleImageDataset
-from prompts import BINARY_PROMPT
-from utils.seed import set_seed
-from utils.io import read_jsonl, write_json, write_predictions_csv
-from utils.metrics import compute_binary_metrics
+from src.config import CFG
+from src.dataset_apps import AppsSingleImageDataset
+from src.prompts import BINARY_PROMPT
+from src.tils.seed import set_seed
+from src.utils.io import read_jsonl, write_json, write_predictions_csv
+from src.utils.metrics import compute_binary_metrics
 
 
 @dataclass
