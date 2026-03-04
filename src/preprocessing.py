@@ -58,8 +58,6 @@ LOW_SIGNAL_PATTERNS = [
     r"(?i)^[\s\-•*]*follow\s*us[:\s]*.*$",
     r"(?i)^[\s\-•*]*connect\s*with\s*us[:\s]*.*$",
     r"(?i)^[\s\-•*]*subscriptions?[:\s]*.*$",
-    r"(?i)^[\s\-•*]*(need\s*)?help\s*(\?|&\s*support)?[:\s]*.*$",
-    r"(?i)^[\s\-•*]*support[:\s]*.*$",
     r"(?i)^[\s\-•*]*feedback[:\s]*.*$",
     r"(?i)^[\s\-•*]*more\s*about\s*.*$",
     r"(?i)^[\s\-•*]*visit\s*(us|our\s*website)[:\s]*.*$",
