@@ -7,10 +7,10 @@ from tqdm import tqdm
 from transformers import AutoProcessor, PaliGemmaForConditionalGeneration
 from peft import PeftModel
 
-from src.config import CFG
-from src.prompts import BINARY_PROMPT
-from src.utils.io import read_jsonl, write_predictions_csv, write_json
-from src.utils.metrics import compute_binary_metrics
+from config import CFG
+from prompts import BINARY_PROMPT
+from utils.io import read_jsonl, write_predictions_csv, write_json
+from utils.metrics import compute_binary_metrics
 
 
 @torch.no_grad()

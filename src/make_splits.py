@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
-from src.config import CFG
+from config import CFG
 
 
 def main():

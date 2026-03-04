@@ -10,14 +10,21 @@ Run:
   python -m src.run_experiment
 """
 from pathlib import Path
+from huggingface_hub import login
+from src.config import CFG
 import os
 
-from src.config import CFG
+from config import CFG
 
 def _splits_exist() -> bool:
     return all(Path(CFG.splits_dir, f"fold_{i}.json").exists() for i in range(CFG.n_folds))
 
 def main():
+
+    if CFG.hf_token:
+        print("[INFO] Logging in to Hugging Face...")
+        login(token=CFG.hf_token)
+
     if not _splits_exist():
         os.system("python -m src.make_splits")
 

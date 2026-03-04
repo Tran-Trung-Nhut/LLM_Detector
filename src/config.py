@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,9 @@ class Config:
     # - "max" is usually best for "evidence in any screenshot"
     # - "mean" is more conservative
     multi_image_pooling: str = "max"
+
+    # API Config
+    hf_token: str = os.environ.get("HF_TOKEN", None)
 
 
 CFG = Config()
