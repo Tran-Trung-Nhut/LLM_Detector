@@ -95,6 +95,8 @@ def infer_yes_prob(model, processor, dataloader, device):
     model.eval()
     y_true, y_prob, rows = [], [], []
     yes_id = processor.tokenizer("YES", add_special_tokens=False)["input_ids"][0]
+    no_id = processor.tokenizer("NO", add_special_tokens=False)["input_ids"][0]
+    debug_once = False
 
     for (inputs, meta) in tqdm(dataloader, desc="infer"):
         for k in list(inputs.keys()):
@@ -103,6 +105,13 @@ def infer_yes_prob(model, processor, dataloader, device):
         last_logits = out.logits[:, -1, :]
         probs = torch.softmax(last_logits, dim=-1)
         p_yes = probs[:, yes_id].detach().cpu().tolist()
+        
+        if not debug_once:
+            txt = processor.tokenizer.decode(inputs["input_ids"][0])
+            print(f"\n[INFER] Input ends: ...{txt[-80:]}")
+            print(f"[INFER] P(YES)={p_yes[0]:.4f}, P(NO)={probs[0, no_id].item():.4f}")
+            print(f"[INFER] Top5: {torch.topk(last_logits[0], 5).indices.tolist()}")
+            debug_once = True
 
         for i, m in enumerate(meta):
             y_true.append(m["y"])
@@ -173,12 +182,19 @@ def train_one_fold(fold: int):
     optim = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
 
     global_step = 0
+    debug_train_once = False
     for epoch in range(cfg.num_epochs):
         pbar = tqdm(train_loader, desc=f"fold {fold} train epoch {epoch}")
         optim.zero_grad(set_to_none=True)
         for (inputs, _meta) in pbar:
             for k in list(inputs.keys()):
                 inputs[k] = inputs[k].to(device)
+            
+            if not debug_train_once:
+                txt = processor.tokenizer.decode(inputs["input_ids"][0])
+                print(f"\n[TRAIN] Input ends: ...{txt[-80:]}")
+                debug_train_once = True
+            
             out = model(**inputs)
             loss = out.loss / cfg.grad_accum
             loss.backward()
