@@ -25,11 +25,11 @@ class Config:
     # -------------------------
     # Training (single-image LoRA)
     # -------------------------
-    num_epochs: int = 10
+    num_epochs: int = 20  
     batch_size: int = 1
     grad_accum: int = 16
-    lr: float = 2e-4
-    weight_decay: float = 0.0
+    lr: float = 1e-5  
+    weight_decay: float = 0.01  # Added regularization
     max_text_len: int = 1024 + 512
 
     # Which single image to pick per app during training/eval:
@@ -39,8 +39,8 @@ class Config:
     image_strategy: str = "best"
 
     # LoRA
-    lora_r: int = 16
-    lora_alpha: int = 32
+    lora_r: int = 16  # Safe for L4, faster training
+    lora_alpha: int = 32  # 2x lora_r (standard)
     lora_dropout: float = 0.05
 
     # Output dirs
