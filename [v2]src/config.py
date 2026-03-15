@@ -13,7 +13,7 @@ class Config:
     seed: int = 42
     n_folds: int = 5
 
-    # ── Data (shared with V1) ──
+    # ── Data ──
     raw_dataset_path: str = "data/apps_raw.jsonl"
     dataset_path: str = "data/apps.jsonl"
     splits_dir: str = "data/splits"
@@ -51,6 +51,23 @@ class Config:
     # ── Classifier ──
     classifier_type: str = "lightgbm"   # "lightgbm" or "xgboost"
     fusion_strategy: str = "stacking"   # "stacking" or "weighted_avg"
+    # LightGBM training parameters
+    lgbm_params: dict = field(default_factory=lambda: {
+        "objective": "binary",
+        "metric": "binary_logloss",
+        "boosting_type": "gbdt",
+        "num_leaves": 31,
+        "learning_rate": 0.05,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 5,
+        "min_child_samples": 5,
+        "lambda_l1": 0.1,
+        "lambda_l2": 1.0,
+        "verbose": -1,
+        "seed": None,
+        "n_jobs": -1,
+    })
 
     # ── Output ──
     runs_dir: str = "runs"

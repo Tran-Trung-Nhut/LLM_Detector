@@ -20,6 +20,9 @@ from collections import defaultdict
 import lightgbm as lgb
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
@@ -73,7 +76,6 @@ def load_features():
         "text_feats": text_feats,
         "image_feats": image_feats,
         "all_feats": all_feats,
-        # Sub-components (for stacking)
         "sbert": sbert,
         "keywords": keywords,
         "meta": meta,
@@ -92,28 +94,14 @@ def load_split(fold: int):
 
 # ── LightGBM classifier ─────────────────────────────────────────────────────
 
-def get_lgbm_params():
-    return {
-        "objective": "binary",
-        "metric": "binary_logloss",
-        "boosting_type": "gbdt",
-        "num_leaves": 31,
-        "learning_rate": 0.05,
-        "feature_fraction": 0.8,
-        "bagging_fraction": 0.8,
-        "bagging_freq": 5,
-        "min_child_samples": 5,
-        "lambda_l1": 0.1,
-        "lambda_l2": 1.0,
-        "verbose": -1,
-        "seed": CFG.seed,
-        "n_jobs": -1,
-    }
+# LightGBM params are now provided centrally via `CFG.lgbm_params` in config.py
 
 
 def train_lgbm(X_train, y_train, X_val, y_val, num_rounds=500):
     """Train a LightGBM model with early stopping."""
-    params = get_lgbm_params()
+    params = dict(CFG.lgbm_params)
+    if params.get("seed") is None:
+        params["seed"] = CFG.seed
     dtrain = lgb.Dataset(X_train, label=y_train)
     dval = lgb.Dataset(X_val, label=y_val, reference=dtrain)
     callbacks = [
@@ -155,7 +143,7 @@ def train_stacking_fusion(text_probs_train, image_probs_train, y_train,
 
 # ── Per-fold training & evaluation ───────────────────────────────────────────
 
-def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Path):
+def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Path, k_features: int = 100):
     """
     Train and evaluate a single feature set across all folds.
     Returns aggregated metrics and per-fold predictions.
@@ -175,6 +163,17 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
         X_train, y_train = X_all[train_idx], labels[train_idx]
         X_test, y_test = X_all[test_idx], labels[test_idx]
 
+        # ─── BẮT ĐẦU: FEATURE SELECTION ───
+        # Chọn k đặc trưng tốt nhất. Nếu số feature ban đầu < k thì lấy toàn bộ.
+        actual_k = min(k_features, X_train.shape[1])
+        if actual_k < X_train.shape[1]:
+            # Dùng f_classif (ANOVA F-value) để chấm điểm mức độ quan trọng
+            selector = SelectKBest(score_func=f_classif, k=actual_k)
+            # CHÚ Ý: Chỉ fit trên tập Train để tránh Data Leakage
+            X_train = selector.fit_transform(X_train, y_train)
+            X_test = selector.transform(X_test)
+        # ─── KẾT THÚC: FEATURE SELECTION ───
+
         model = train_lgbm(X_train, y_train, X_test, y_test)
         y_prob = predict_lgbm(model, X_test)
 
@@ -190,11 +189,19 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
                 "y_prob": float(y_prob[i]),
             })
 
-        # Save feature importance for last fold
+        # Cập nhật phần lưu Feature Importance để biết chính xác cột nào được giữ lại
         if fold == 0 and hasattr(model, "feature_importance"):
             imp = model.feature_importance(importance_type="gain")
+            
+            # Lấy index gốc của các feature đã được giữ lại
+            if actual_k < X_all.shape[1]:
+                selected_indices = selector.get_support(indices=True)
+            else:
+                selected_indices = np.arange(X_all.shape[1])
+
             write_json(run_dir / "feature_importance_fold0.json", {
                 "importance_gain": imp.tolist(),
+                "selected_original_indices": selected_indices.tolist() # Rất quan trọng cho bài báo
             })
 
         print(f"  Fold {fold}: acc={metrics['accuracy']:.3f} "
@@ -210,7 +217,6 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
           f"f1={agg['f1_pos_mean']:.3f}±{agg['f1_pos_std']:.3f} "
           f"auc={agg['roc_auc_mean']:.3f}±{agg['roc_auc_std']:.3f}")
     return all_preds, fold_metrics
-
 
 def aggregate_metrics(fold_metrics: list[dict]) -> dict:
     """Average metrics across folds."""

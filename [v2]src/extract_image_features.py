@@ -27,8 +27,7 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from config import CFG
-from keywords import KEYWORDS
-from extract_text_features import compute_keyword_features, KEYWORD_CATEGORIES
+from extract_text_features import compute_keyword_features
 from utils.io import read_jsonl
 
 

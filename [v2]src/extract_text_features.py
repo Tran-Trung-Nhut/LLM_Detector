@@ -8,7 +8,6 @@ Extracts three types of text features per app:
 
 Output: one .npz file per app_id stored under features_dir/text/
 """
-import json
 import os
 import re
 import math
@@ -18,6 +17,7 @@ from pathlib import Path
 from tqdm import tqdm
 import torch
 from transformers import AutoTokenizer, AutoModel
+from keywords import KEYWORD_CATEGORIES, TOP_CATEGORIES_KEYWORDS
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
@@ -26,25 +26,10 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from config import CFG
-from keywords import KEYWORDS
 from utils.io import read_jsonl
 
 
 # ── Keyword feature helpers ──────────────────────────────────────────────────
-
-# Group keywords by category for per-category binary features
-KEYWORD_CATEGORIES = {
-    "model_name": ["chatgpt", "gpt-4", "gpt-3", "claude", "gemini", "copilot", "llama", "mistral"],
-    "core_llm": ["llm", "large language model", "ai chat", "chatbot", "ai assistant"],
-    "generation": ["generate text", "text generation", "ai writing", "ai writer", "ai compose",
-                    "ai draft", "smart reply", "auto-reply", "rewrite", "paraphrase", "summar"],
-    "interaction": ["ask ai", "ai answer", "talk to ai", "chat with ai", "prompt",
-                    "conversational ai", "ai-powered chat", "ai response"],
-    "content": ["content generat", "essay generator", "article generator", "story generator",
-                "ai copywriting", "ai content"],
-}
-
-
 def compute_keyword_features(text: str) -> np.ndarray:
     """
     Return a feature vector from keyword matching on *text*.
@@ -85,12 +70,6 @@ def compute_keyword_features(text: str) -> np.ndarray:
 
 # ── Handcrafted metadata features ────────────────────────────────────────────
 
-TOP_CATEGORIES = [
-    "Education", "Communication", "Business", "Productivity", "Health & Fitness",
-    "Tools", "Entertainment", "Lifestyle", "Social", "Finance",
-    "Shopping", "Travel & Local", "Medical", "Music & Audio", "Photography",
-]
-
 
 def compute_meta_features(record: dict) -> np.ndarray:
     """
@@ -118,9 +97,9 @@ def compute_meta_features(record: dict) -> np.ndarray:
         float(n_images),
     ]
 
-    cat_onehot = [0.0] * (len(TOP_CATEGORIES) + 1)
-    if cat in TOP_CATEGORIES:
-        cat_onehot[TOP_CATEGORIES.index(cat)] = 1.0
+    cat_onehot = [0.0] * (len(TOP_CATEGORIES_KEYWORDS) + 1)
+    if cat in TOP_CATEGORIES_KEYWORDS:
+        cat_onehot[TOP_CATEGORIES_KEYWORDS.index(cat)] = 1.0
     else:
         cat_onehot[-1] = 1.0
     feats.extend(cat_onehot)
