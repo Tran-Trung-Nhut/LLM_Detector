@@ -48,26 +48,28 @@ def encode_images_clip(image_paths: list[str], processor, model, device,
                        batch_size: int = 16) -> np.ndarray:
     """Return (N_images, embed_dim) float32 array of CLIP image embeddings."""
     all_embeds = []
-    valid_indices = []
     for i in range(0, len(image_paths), batch_size):
         batch_paths = image_paths[i : i + batch_size]
         images = []
-        for j, p in enumerate(batch_paths):
+        for p in batch_paths:
             try:
                 img = Image.open(p).convert("RGB")
                 images.append(img)
-                valid_indices.append(i + j)
             except Exception:
                 continue
         if not images:
             continue
+            
         inputs = processor(images=images, return_tensors="pt", padding=True).to(device)
         with torch.no_grad():
-            outputs = model.get_image_features(**inputs)
-
-        embeds = outputs
-        if not isinstance(embeds, torch.Tensor):
-            embeds = embeds[0] if isinstance(embeds, (list, tuple)) else outputs.get("image_embeds", outputs[0])
+            # Bước 1: Trích xuất đầu ra thô từ Vision Model
+            vision_outputs = model.vision_model(pixel_values=inputs["pixel_values"])
+            # Bước 2: Lấy vector Pooling
+            pooled_output = vision_outputs.pooler_output if hasattr(vision_outputs, "pooler_output") else vision_outputs[1]
+            # Bước 3: Chiếu (Project) về đúng 768 chiều
+            embeds = model.visual_projection(pooled_output)
+            
+        # Chuẩn hóa (Normalize)
         embeds = embeds / embeds.norm(dim=-1, keepdim=True)
         all_embeds.append(embeds.cpu().float().numpy())
 
@@ -80,18 +82,16 @@ def encode_texts_clip(texts: list[str], processor, model, device) -> np.ndarray:
     """Return (N_texts, embed_dim) float32 array of CLIP text embeddings."""
     inputs = processor(text=texts, return_tensors="pt", padding=True, truncation=True).to(device)
     with torch.no_grad():
-        outputs = model.get_text_features(**inputs)
+        # Bước 1: Trích xuất đầu ra thô từ Text Model
+        text_outputs = model.text_model(input_ids=inputs["input_ids"], attention_mask=inputs.get("attention_mask"))
+        # Bước 2: Lấy vector Pooling
+        pooled_output = text_outputs.pooler_output if hasattr(text_outputs, "pooler_output") else text_outputs[1]
+        # Bước 3: Chiếu (Project) về đúng 768 chiều
+        embeds = model.text_projection(pooled_output)
         
-    embeds = outputs
-    if not isinstance(embeds, torch.Tensor):
-        if hasattr(outputs, "text_embeds"):
-            embeds = outputs.text_embeds
-        else:
-            embeds = outputs[0]
-        
+    # Chuẩn hóa (Normalize)
     embeds = embeds / embeds.norm(dim=-1, keepdim=True)
     return embeds.cpu().float().numpy()
-
 
 # ── Zero-shot similarity ─────────────────────────────────────────────────────
 
