@@ -233,9 +233,9 @@ def aggregate_metrics(fold_metrics: list[dict]) -> dict:
 
 def run_fusion_experiment(data: dict, run_dir: Path):
     """
-    Three sub-experiments + stacking fusion.
+    Three sub-experiments + stacking/voting fusion.
     Fusion A: concatenate all features → single LightGBM  (early fusion)
-    Fusion B: stack text-only & image-only probabilities → LogisticRegression  (late fusion)
+    Fusion B: stack text-only & image-only probabilities (late fusion)
     """
     run_dir.mkdir(parents=True, exist_ok=True)
     id2idx = data["id2idx"]
@@ -243,41 +243,63 @@ def run_fusion_experiment(data: dict, run_dir: Path):
 
     # ── Early fusion (all features → LightGBM) ──
     print("\n[C1] Early Fusion (all features → LightGBM)")
+    # Vẫn gọi hàm run_single_experiment đã có SelectKBest ở trên
     run_single_experiment("EarlyFusion", data["all_feats"], data, run_dir / "early_fusion")
 
-    # ── Late fusion (stacking) ──
-    print("\n[C2] Late Fusion (stacking text + image probs)")
+    # ── Late fusion (Stacking hoặc Soft Voting) ──
+    print(f"\n[C2] Late Fusion (Strategy: {CFG.fusion_strategy})")
     stacking_dir = run_dir / "late_fusion"
     stacking_dir.mkdir(parents=True, exist_ok=True)
 
     all_preds_stack = []
     fold_metrics_stack = []
 
+    from sklearn.feature_selection import SelectKBest, f_classif
+
     for fold in range(CFG.n_folds):
         split = load_split(fold)
         train_idx = [id2idx[aid] for aid in split["train_ids"] if aid in id2idx]
         test_idx = [id2idx[aid] for aid in split["test_ids"] if aid in id2idx]
 
-        # Train text-only model
         X_text_tr, y_tr = data["text_feats"][train_idx], labels[train_idx]
         X_text_te, y_te = data["text_feats"][test_idx], labels[test_idx]
-        text_model = train_lgbm(X_text_tr, y_tr, X_text_te, y_te)
-        text_prob_tr = text_model.predict(X_text_tr)
-        text_prob_te = text_model.predict(X_text_te)
-
-        # Train image-only model
+        
         X_img_tr = data["image_feats"][train_idx]
         X_img_te = data["image_feats"][test_idx]
+
+        # 1. Lọc đặc trưng (Feature Selection) cho từng nhánh để chống Overfitting
+        text_selector = SelectKBest(score_func=f_classif, k=min(100, X_text_tr.shape[1]))
+        X_text_tr = text_selector.fit_transform(X_text_tr, y_tr)
+        X_text_te = text_selector.transform(X_text_te)
+
+        img_selector = SelectKBest(score_func=f_classif, k=min(100, X_img_tr.shape[1]))
+        X_img_tr = img_selector.fit_transform(X_img_tr, y_tr)
+        X_img_te = img_selector.transform(X_img_te)
+
+        # 2. Train mô hình độc lập
+        text_model = train_lgbm(X_text_tr, y_tr, X_text_te, y_te)
+        text_prob_te = text_model.predict(X_text_te)
+
         img_model = train_lgbm(X_img_tr, y_tr, X_img_te, y_te)
-        img_prob_tr = img_model.predict(X_img_tr)
         img_prob_te = img_model.predict(X_img_te)
 
-        # Stack
-        y_prob, _, _ = train_stacking_fusion(
-            text_prob_tr, img_prob_tr, y_tr,
-            text_prob_te, img_prob_te,
-        )
+        # 3. Phân nhánh chiến lược Fusion
+        if CFG.fusion_strategy == "stacking":
+            # Phương án cũ: Logistic Regression (Lưu ý: Có rủi ro Data Leakage do predict trên tập Train)
+            text_prob_tr = text_model.predict(X_text_tr)
+            img_prob_tr = img_model.predict(X_img_tr)
 
+            y_prob, _, _ = train_stacking_fusion(
+                text_prob_tr, img_prob_tr, y_tr,
+                text_prob_te, img_prob_te,
+            )
+        elif CFG.fusion_strategy == "soft_voting":
+            # Phương án mới: Soft Voting / Weighted Avg (An toàn, không Leakage)
+            y_prob = (text_prob_te + img_prob_te) / 2.0
+        else:
+            raise ValueError(f"Unknown fusion strategy: {CFG.fusion_strategy}")
+
+        # 4. Tính toán Metrics
         metrics = compute_binary_metrics(y_te, y_prob, threshold=0.5)
         metrics["fold"] = fold
         fold_metrics_stack.append(metrics)
