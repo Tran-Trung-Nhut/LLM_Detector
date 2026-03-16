@@ -267,7 +267,7 @@ def run_fusion_experiment(data: dict, run_dir: Path):
         X_img_tr = data["image_feats"][train_idx]
         X_img_te = data["image_feats"][test_idx]
 
-        # 1. Lọc đặc trưng (Feature Selection) cho từng nhánh để chống Overfitting
+
         text_selector = SelectKBest(score_func=f_classif, k=min(100, X_text_tr.shape[1]))
         X_text_tr = text_selector.fit_transform(X_text_tr, y_tr)
         X_text_te = text_selector.transform(X_text_te)
@@ -276,16 +276,14 @@ def run_fusion_experiment(data: dict, run_dir: Path):
         X_img_tr = img_selector.fit_transform(X_img_tr, y_tr)
         X_img_te = img_selector.transform(X_img_te)
 
-        # 2. Train mô hình độc lập
+
         text_model = train_lgbm(X_text_tr, y_tr, X_text_te, y_te)
         text_prob_te = text_model.predict(X_text_te)
 
         img_model = train_lgbm(X_img_tr, y_tr, X_img_te, y_te)
         img_prob_te = img_model.predict(X_img_te)
 
-        # 3. Phân nhánh chiến lược Fusion
         if CFG.fusion_strategy == "stacking":
-            # Phương án cũ: Logistic Regression (Lưu ý: Có rủi ro Data Leakage do predict trên tập Train)
             text_prob_tr = text_model.predict(X_text_tr)
             img_prob_tr = img_model.predict(X_img_tr)
 
@@ -294,12 +292,12 @@ def run_fusion_experiment(data: dict, run_dir: Path):
                 text_prob_te, img_prob_te,
             )
         elif CFG.fusion_strategy == "soft_voting":
-            # Phương án mới: Soft Voting / Weighted Avg (An toàn, không Leakage)
             y_prob = (text_prob_te + img_prob_te) / 2.0
+        elif CFG.fusion_strategy == "max_voting":
+            y_prob = np.maximum(text_prob_te, img_prob_te)
         else:
             raise ValueError(f"Unknown fusion strategy: {CFG.fusion_strategy}")
 
-        # 4. Tính toán Metrics
         metrics = compute_binary_metrics(y_te, y_prob, threshold=0.5)
         metrics["fold"] = fold
         fold_metrics_stack.append(metrics)

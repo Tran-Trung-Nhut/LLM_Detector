@@ -50,7 +50,7 @@ class Config:
 
     # ── Classifier ──
     classifier_type: str = "lightgbm"   # "lightgbm" or "xgboost"
-    fusion_strategy: str = "stacking"   # "stacking" or "weighted_avg"
+    fusion_strategy: str = "stacking"   # "stacking" or "max_voting" or "soft_voting"
     # LightGBM training parameters
     lgbm_params: dict = field(default_factory=lambda: {
         "objective": "binary",
