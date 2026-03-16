@@ -17,7 +17,6 @@ from pathlib import Path
 from tqdm import tqdm
 import torch
 from transformers import AutoTokenizer, AutoModel
-from keywords import KEYWORD_CATEGORIES, TOP_CATEGORIES_KEYWORDS
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
@@ -46,7 +45,7 @@ def compute_keyword_features(text: str) -> np.ndarray:
     cat_counts = {}
     max_kw_len = 0
 
-    for cat, kws in KEYWORD_CATEGORIES.items():
+    for cat, kws in CFG.keyword_categories.items():
         cat_count = 0
         for kw in kws:
             n = len(re.findall(re.escape(kw), lower))
@@ -60,7 +59,7 @@ def compute_keyword_features(text: str) -> np.ndarray:
         total_count,
         math.log1p(total_count),
     ]
-    for cat in KEYWORD_CATEGORIES:
+    for cat in CFG.keyword_categories:
         feats.append(1.0 if cat_counts[cat] > 0 else 0.0)
         feats.append(float(cat_counts[cat]))
     feats.append(float(max_kw_len))
@@ -79,7 +78,7 @@ def compute_meta_features(record: dict) -> np.ndarray:
       - title length                      (1)
       - has recent_changes                (1)
       - num images                        (1)
-      - category one-hot                  (len(TOP_CATEGORIES) + 1 for 'other')
+      - category one-hot                  (len(CFG.top_categories) + 1 for 'other')
     Total: 5 + 16 = 21 features
     """
     desc = record.get("description", "") or ""
@@ -97,9 +96,9 @@ def compute_meta_features(record: dict) -> np.ndarray:
         float(n_images),
     ]
 
-    cat_onehot = [0.0] * (len(TOP_CATEGORIES_KEYWORDS) + 1)
-    if cat in TOP_CATEGORIES_KEYWORDS:
-        cat_onehot[TOP_CATEGORIES_KEYWORDS.index(cat)] = 1.0
+    cat_onehot = [0.0] * (len(CFG.top_categories) + 1)
+    if cat in CFG.top_categories:
+        cat_onehot[CFG.top_categories.index(cat)] = 1.0
     else:
         cat_onehot[-1] = 1.0
     feats.extend(cat_onehot)
@@ -119,14 +118,16 @@ def load_text_model():
 
 
 def encode_texts(texts: list[str], tokenizer, model, device,
-                 batch_size: int = 32) -> np.ndarray:
+                 batch_size: int = None) -> np.ndarray:
     """Encode a list of texts into embeddings using mean pooling."""
+    if batch_size is None:
+        batch_size = CFG.text_batch_size
     all_embeds = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         encoded = tokenizer(
             batch, padding=True, truncation=True,
-            max_length=512, return_tensors="pt"
+            max_length=CFG.text_max_length, return_tensors="pt"
         ).to(device)
         with torch.no_grad():
             outputs = model(**encoded)

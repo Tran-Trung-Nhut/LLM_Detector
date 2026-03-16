@@ -42,9 +42,11 @@ def load_features():
     """Load and merge text + image features into one dict keyed by app_id."""
     text_path = Path(CFG.features_dir) / "text" / "features.npz"
     image_path = Path(CFG.features_dir) / "image" / "features.npz"
+    slm_path = Path(CFG.features_dir) / "slm" / "features.npz" 
 
     td = np.load(text_path, allow_pickle=True)
     imd = np.load(image_path, allow_pickle=True)
+    slmd = np.load(slm_path, allow_pickle=True) 
 
     app_ids = list(td["app_ids"])
     labels = td["labels"]
@@ -60,10 +62,13 @@ def load_features():
     zeroshot = imd["zeroshot"]    # (N, ~12)
     ocr = imd["ocr"]             # (N, 15)
 
+    # SLM reasoning score
+    slm_score = slmd["slm_score"] # (N, 1)
+
     assert list(td["app_ids"]) == list(imd["app_ids"]), "Feature files must have same app order"
 
     # Build feature groups
-    text_feats = np.concatenate([sbert, keywords, meta], axis=1)
+    text_feats = np.concatenate([sbert, keywords, meta, slm_score], axis=1)
     image_feats = np.concatenate([clip_mean, clip_max, zeroshot, ocr], axis=1)
     all_feats = np.concatenate([text_feats, image_feats], axis=1)
 
@@ -97,15 +102,17 @@ def load_split(fold: int):
 # LightGBM params are now provided centrally via `CFG.lgbm_params` in config.py
 
 
-def train_lgbm(X_train, y_train, X_val, y_val, num_rounds=500):
+def train_lgbm(X_train, y_train, X_val, y_val, num_rounds=None):
     """Train a LightGBM model with early stopping."""
+    if num_rounds is None:
+        num_rounds = CFG.lgbm_num_rounds
     params = dict(CFG.lgbm_params)
     if params.get("seed") is None:
         params["seed"] = CFG.seed
     dtrain = lgb.Dataset(X_train, label=y_train)
     dval = lgb.Dataset(X_val, label=y_val, reference=dtrain)
     callbacks = [
-        lgb.early_stopping(stopping_rounds=50, verbose=False),
+        lgb.early_stopping(stopping_rounds=CFG.lgbm_early_stopping_rounds, verbose=False),
         lgb.log_evaluation(period=0),
     ]
     model = lgb.train(
@@ -136,18 +143,25 @@ def train_stacking_fusion(text_probs_train, image_probs_train, y_train,
     X_meta_train = scaler.fit_transform(X_meta_train)
     X_meta_val = scaler.transform(X_meta_val)
 
-    meta_clf = LogisticRegression(C=1.0, solver="lbfgs", max_iter=1000, random_state=CFG.seed)
+    meta_clf = LogisticRegression(
+        C=CFG.meta_learner_C, 
+        solver="lbfgs", 
+        max_iter=CFG.meta_learner_max_iter, 
+        random_state=CFG.seed
+    )
     meta_clf.fit(X_meta_train, y_train)
     return meta_clf.predict_proba(X_meta_val)[:, 1], meta_clf, scaler
 
 
 # ── Per-fold training & evaluation ───────────────────────────────────────────
 
-def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Path, k_features: int = 100):
+def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Path, k_features: int = None):
     """
     Train and evaluate a single feature set across all folds.
     Returns aggregated metrics and per-fold predictions.
     """
+    if k_features is None:
+        k_features = CFG.feature_selection_k
     run_dir.mkdir(parents=True, exist_ok=True)
     id2idx = data["id2idx"]
     labels = data["labels"]
@@ -177,7 +191,7 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
         model = train_lgbm(X_train, y_train, X_test, y_test)
         y_prob = predict_lgbm(model, X_test)
 
-        metrics = compute_binary_metrics(y_test, y_prob, threshold=0.5)
+        metrics = compute_binary_metrics(y_test, y_prob, threshold=CFG.classification_threshold)
         metrics["fold"] = fold
         fold_metrics.append(metrics)
 

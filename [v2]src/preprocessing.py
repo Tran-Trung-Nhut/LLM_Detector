@@ -20,7 +20,9 @@ if str(_SCRIPT_DIR) not in sys.path:
 from config import CFG
 
 
-def dedup_image_paths(image_paths, max_dist=4):
+def dedup_image_paths(image_paths, max_dist=None):
+    if max_dist is None:
+        max_dist = CFG.image_dedup_max_dist
     hashes = []
     kept = []
     for p in image_paths:
@@ -44,18 +46,8 @@ def clean_html(text):
     return text
 
 
-FOOTER_MARKERS = [
-    r"privacy\s*policy",
-    r"terms\s*(of\s*(use|service))?",
-    r"contact\s*us",
-    r"follow\s*us",
-    r"connect\s*with\s*us",
-    r"subscriptions?",
-    r"in[-\s]*app\s*purchases?",
-    r"need\s*help",
-    r"feedback",
-    r"refund",
-]
+# Footer markers are now centralized in config.py
+FOOTER_MARKERS = list(CFG.footer_markers)
 
 
 def remove_low_signal(text):

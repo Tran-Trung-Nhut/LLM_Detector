@@ -21,7 +21,7 @@ from config import CFG
 def run_ocr_on_image(image_path):
     try:
         img = Image.open(image_path).convert("RGB")
-        return pytesseract.image_to_string(img, lang="eng").strip()
+        return pytesseract.image_to_string(img, lang=CFG.ocr_lang).strip()
     except Exception:
         return ""
 

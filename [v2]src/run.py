@@ -81,6 +81,18 @@ def step_extract_image_features():
     import extract_image_features
     extract_image_features.main()
 
+def step_extract_slm_features():
+    """Step 4c: Extract SLM reasoning score."""
+    feat_path = Path(CFG.features_dir) / "slm" / "features.npz"
+    if feat_path.exists():
+        print(f"[skip] SLM features already cached at {feat_path}")
+        return
+    print("\n" + "=" * 60)
+    print("STEP 4c: Extract SLM Reasoning Features")
+    print("=" * 60)
+    import extract_slm_features
+    extract_slm_features.main()
+
 
 def step_train_evaluate():
     """Step 5: Train classifiers and evaluate with 5-fold CV."""
@@ -113,7 +125,7 @@ def main():
         if not args.skip_features:
             step_extract_text_features()
             step_extract_image_features()
-
+            step_extract_slm_features()
     step_train_evaluate()
 
     print("\n" + "=" * 60)

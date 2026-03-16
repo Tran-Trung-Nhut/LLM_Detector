@@ -45,8 +45,10 @@ def load_clip_model():
 # ── Encode images in batches ─────────────────────────────────────────────────
 
 def encode_images_clip(image_paths: list[str], processor, model, device,
-                       batch_size: int = 16) -> np.ndarray:
+                       batch_size: int = None) -> np.ndarray:
     """Return (N_images, embed_dim) float32 array of CLIP image embeddings."""
+    if batch_size is None:
+        batch_size = CFG.clip_batch_size
     all_embeds = []
     for i in range(0, len(image_paths), batch_size):
         batch_paths = image_paths[i : i + batch_size]
