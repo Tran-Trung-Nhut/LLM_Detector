@@ -69,7 +69,7 @@ Score:"""
 
     # ── Classifier ──
     classifier_type: str = "lightgbm"   # "lightgbm" or "xgboost"
-    fusion_strategy: str = "stacking"   # "stacking" or "max_voting" or "soft_voting"
+    fusion_strategy: list[str] = field(default_factory=lambda: ["stacking", "max_voting", "soft_voting"])   # "stacking" or "max_voting" or "soft_voting"
     
     # LightGBM training parameters
     lgbm_num_rounds: int = 500

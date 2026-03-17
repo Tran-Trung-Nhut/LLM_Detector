@@ -249,7 +249,7 @@ def run_fusion_experiment(data: dict, run_dir: Path):
     """
     Three sub-experiments + stacking/voting fusion.
     Fusion A: concatenate all features → single LightGBM  (early fusion)
-    Fusion B: stack text-only & image-only probabilities (late fusion)
+    Fusion B: stack text-only & image-only probabilities (late fusion with multiple strategies)
     """
     run_dir.mkdir(parents=True, exist_ok=True)
     id2idx = data["id2idx"]
@@ -257,18 +257,14 @@ def run_fusion_experiment(data: dict, run_dir: Path):
 
     # ── Early fusion (all features → LightGBM) ──
     print("\n[C1] Early Fusion (all features → LightGBM)")
-    # Vẫn gọi hàm run_single_experiment đã có SelectKBest ở trên
     run_single_experiment("EarlyFusion", data["all_feats"], data, run_dir / "early_fusion")
 
-    # ── Late fusion (Stacking hoặc Soft Voting) ──
-    print(f"\n[C2] Late Fusion (Strategy: {CFG.fusion_strategy})")
-    stacking_dir = run_dir / "late_fusion"
-    stacking_dir.mkdir(parents=True, exist_ok=True)
-
-    all_preds_stack = []
-    fold_metrics_stack = []
-
+    # ── Late fusion: Train base models first ──
+    print(f"\n[C2] Late Fusion - Training base models...")
     from sklearn.feature_selection import SelectKBest, f_classif
+
+    # Store predictions from base models for all folds
+    fold_predictions = []
 
     for fold in range(CFG.n_folds):
         split = load_split(fold)
@@ -281,62 +277,118 @@ def run_fusion_experiment(data: dict, run_dir: Path):
         X_img_tr = data["image_feats"][train_idx]
         X_img_te = data["image_feats"][test_idx]
 
-
+        # Feature selection
         text_selector = SelectKBest(score_func=f_classif, k=min(100, X_text_tr.shape[1]))
-        X_text_tr = text_selector.fit_transform(X_text_tr, y_tr)
-        X_text_te = text_selector.transform(X_text_te)
+        X_text_tr_sel = text_selector.fit_transform(X_text_tr, y_tr)
+        X_text_te_sel = text_selector.transform(X_text_te)
 
         img_selector = SelectKBest(score_func=f_classif, k=min(100, X_img_tr.shape[1]))
-        X_img_tr = img_selector.fit_transform(X_img_tr, y_tr)
-        X_img_te = img_selector.transform(X_img_te)
+        X_img_tr_sel = img_selector.fit_transform(X_img_tr, y_tr)
+        X_img_te_sel = img_selector.transform(X_img_te)
 
+        # Train base models
+        text_model = train_lgbm(X_text_tr_sel, y_tr, X_text_te_sel, y_te)
+        text_prob_tr = text_model.predict(X_text_tr_sel)
+        text_prob_te = text_model.predict(X_text_te_sel)
 
-        text_model = train_lgbm(X_text_tr, y_tr, X_text_te, y_te)
-        text_prob_te = text_model.predict(X_text_te)
+        img_model = train_lgbm(X_img_tr_sel, y_tr, X_img_te_sel, y_te)
+        img_prob_tr = img_model.predict(X_img_tr_sel)
+        img_prob_te = img_model.predict(X_img_te_sel)
 
-        img_model = train_lgbm(X_img_tr, y_tr, X_img_te, y_te)
-        img_prob_te = img_model.predict(X_img_te)
+        # Store for fusion
+        fold_predictions.append({
+            "fold": fold,
+            "train_idx": train_idx,
+            "test_idx": test_idx,
+            "y_tr": y_tr,
+            "y_te": y_te,
+            "text_prob_tr": text_prob_tr,
+            "text_prob_te": text_prob_te,
+            "img_prob_tr": img_prob_tr,
+            "img_prob_te": img_prob_te,
+        })
 
-        if CFG.fusion_strategy == "stacking":
-            text_prob_tr = text_model.predict(X_text_tr)
-            img_prob_tr = img_model.predict(X_img_tr)
+        print(f"  Fold {fold}: Base models trained")
 
-            y_prob, _, _ = train_stacking_fusion(
-                text_prob_tr, img_prob_tr, y_tr,
-                text_prob_te, img_prob_te,
-            )
-        elif CFG.fusion_strategy == "soft_voting":
-            y_prob = (text_prob_te + img_prob_te) / 2.0
-        elif CFG.fusion_strategy == "max_voting":
-            y_prob = np.maximum(text_prob_te, img_prob_te)
-        else:
-            raise ValueError(f"Unknown fusion strategy: {CFG.fusion_strategy}")
+    # ── Apply each fusion strategy ──
+    print(f"\n[C2] Late Fusion - Testing {len(CFG.fusion_strategy)} strategies...")
+    
+    for strategy in CFG.fusion_strategy:
+        print(f"\n  → Strategy: {strategy.upper()}")
+        strategy_dir = run_dir / f"late_fusion_{strategy}"
+        strategy_dir.mkdir(parents=True, exist_ok=True)
+        
+        all_preds = []
+        fold_metrics = []
+        meta_learners = []  # Store meta-learners for analysis
 
-        metrics = compute_binary_metrics(y_te, y_prob, threshold=0.5)
-        metrics["fold"] = fold
-        fold_metrics_stack.append(metrics)
+        for fold_data in fold_predictions:
+            fold = fold_data["fold"]
+            test_idx = fold_data["test_idx"]
+            y_te = fold_data["y_te"]
+            text_prob_te = fold_data["text_prob_te"]
+            img_prob_te = fold_data["img_prob_te"]
 
-        for i, idx in enumerate(test_idx):
-            all_preds_stack.append({
-                "app_id": data["app_ids"][idx],
-                "fold": fold,
-                "y_true": int(y_te[i]),
-                "y_prob": float(y_prob[i]),
-                "text_prob": float(text_prob_te[i]),
-                "image_prob": float(img_prob_te[i]),
-            })
+            # Compute fusion predictions based on strategy
+            if strategy == "stacking":
+                text_prob_tr = fold_data["text_prob_tr"]
+                img_prob_tr = fold_data["img_prob_tr"]
+                y_tr = fold_data["y_tr"]
+                
+                y_prob, meta_clf, scaler = train_stacking_fusion(
+                    text_prob_tr, img_prob_tr, y_tr,
+                    text_prob_te, img_prob_te,
+                )
+                
+                # Store meta-learner weights for first fold
+                if fold == 0:
+                    weights = meta_clf.coef_[0]
+                    intercept = meta_clf.intercept_[0]
+                    write_json(strategy_dir / "meta_learner_weights.json", {
+                        "text_weight": float(weights[0]),
+                        "image_weight": float(weights[1]),
+                        "intercept": float(intercept),
+                        "interpretation": f"Text: {weights[0]:.3f}, Image: {weights[1]:.3f}"
+                    })
+                    
+            elif strategy == "soft_voting":
+                y_prob = (text_prob_te + img_prob_te) / 2.0
+                
+            elif strategy == "max_voting":
+                y_prob = np.maximum(text_prob_te, img_prob_te)
+                
+            else:
+                raise ValueError(f"Unknown fusion strategy: {strategy}")
 
-        print(f"  Fold {fold}: acc={metrics['accuracy']:.3f} "
-              f"f1={metrics['f1_pos']:.3f} auc={metrics['roc_auc']:.3f}")
+            # Evaluate
+            metrics = compute_binary_metrics(y_te, y_prob, threshold=0.5)
+            metrics["fold"] = fold
+            fold_metrics.append(metrics)
 
-    agg = aggregate_metrics(fold_metrics_stack)
-    write_json(stacking_dir / "metrics_per_fold.json", fold_metrics_stack)
-    write_json(stacking_dir / "metrics_aggregated.json", agg)
-    write_predictions_csv(stacking_dir / "predictions.csv", all_preds_stack)
+            # Store predictions
+            for i, idx in enumerate(test_idx):
+                all_preds.append({
+                    "app_id": data["app_ids"][idx],
+                    "fold": fold,
+                    "y_true": int(y_te[i]),
+                    "y_prob": float(y_prob[i]),
+                    "text_prob": float(text_prob_te[i]),
+                    "image_prob": float(img_prob_te[i]),
+                })
 
-    print(f"  ── LateFusion AGGREGATE: acc={agg['accuracy_mean']:.3f}±{agg['accuracy_std']:.3f} "
-          f"f1={agg['f1_pos_mean']:.3f}±{agg['f1_pos_std']:.3f} "
-          f"auc={agg['roc_auc_mean']:.3f}±{agg['roc_auc_std']:.3f}")
+            print(f"    Fold {fold}: acc={metrics['accuracy']:.3f} "
+                  f"f1={metrics['f1_pos']:.3f} auc={metrics['roc_auc']:.3f}")
+
+        # Save results for this strategy
+        agg = aggregate_metrics(fold_metrics)
+        write_json(strategy_dir / "metrics_per_fold.json", fold_metrics)
+        write_json(strategy_dir / "metrics_aggregated.json", agg)
+        write_predictions_csv(strategy_dir / "predictions.csv", all_preds)
+
+        print(f"    ── {strategy.upper()} AGGREGATE: "
+              f"acc={agg['accuracy_mean']:.3f}±{agg['accuracy_std']:.3f} "
+              f"f1={agg['f1_pos_mean']:.3f}±{agg['f1_pos_std']:.3f} "
+              f"auc={agg['roc_auc_mean']:.3f}±{agg['roc_auc_std']:.3f}")
 
 
 # ── Threshold search ─────────────────────────────────────────────────────────
@@ -389,13 +441,34 @@ def main():
     # Threshold search on best models
     print("\n" + "=" * 60)
     print("Threshold search on predictions ...")
-    for sub in ["text_only", "image_only", "fusion/early_fusion", "fusion/late_fusion"]:
+    
+    # Build list of paths to search
+    search_paths = ["text_only", "image_only", "fusion/early_fusion"]
+    
+    # Add all late fusion strategies
+    for strategy in CFG.fusion_strategy:
+        search_paths.append(f"fusion/late_fusion_{strategy}")
+    
+    for sub in search_paths:
         csv_path = base_dir / sub / "predictions.csv"
         if csv_path.exists():
             best = find_best_threshold(csv_path)
             write_json(csv_path.parent / "best_threshold_metrics.json", best)
             print(f"  {sub}: best_t={best['best_threshold']:.2f} "
                   f"acc={best['accuracy']:.3f} f1={best['f1_pos']:.3f}")
+
+    print("\n" + "=" * 60)
+    print("SUMMARY: Late Fusion Strategy Comparison")
+    print("=" * 60)
+    for strategy in CFG.fusion_strategy:
+        strategy_dir = base_dir / "fusion" / f"late_fusion_{strategy}"
+        agg_path = strategy_dir / "metrics_aggregated.json"
+        if agg_path.exists():
+            with open(agg_path) as f:
+                agg = json.load(f)
+            print(f"  {strategy.upper():15s}: "
+                  f"F1={agg['f1_pos_mean']:.4f}±{agg['f1_pos_std']:.4f}  "
+                  f"ROC-AUC={agg['roc_auc_mean']:.4f}±{agg['roc_auc_std']:.4f}")
 
     print("\nDone! Results saved to:", base_dir)
 
