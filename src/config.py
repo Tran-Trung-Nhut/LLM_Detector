@@ -26,7 +26,7 @@ class Config:
     text_max_length: int = 512  # Tokenizer max length
 
     # ── SLM Reasoning Module ──
-    # Khuyên dùng Qwen2.5-1.5B hoặc Gemma-2-2B vì chạy cực mượt trên GPU L4, suy luận logic rất tốt
+    # Recommend Qwen2.5-1.5B or Gemma-2-2B as they run smoothly on L4 GPU with excellent reasoning
     slm_model: str = "Qwen/Qwen2.5-1.5B-Instruct" 
     slm_max_new_tokens: int = 10
     slm_batch_size: int = 8
@@ -155,6 +155,11 @@ Score:"""
     # ── Output ──
     runs_dir: str = "runs"
     run_name: str = "v2_feature_fusion"
+
+    # ── Inference ──
+    inference_test_features_dir: str = "data/features_test"
+    inference_output_dir: str = "inference_results"
+    inference_default_threshold: float = 0.5
 
     # ── Misc ──
     hf_token: str = os.environ.get("HF_TOKEN", None)

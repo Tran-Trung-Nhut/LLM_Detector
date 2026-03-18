@@ -7,7 +7,8 @@ Three experiment modes run automatically:
   C) Fusion classifier        (all features, late-fusion stacking)
 
 For each, trains LightGBM (or XGBoost) per fold, reports per-fold and
-aggregated metrics, and saves predictions + feature importances.
+aggregated metrics, and SAVES models (SelectKBest, LightGBM, Meta-learners) 
+for 5-fold ensemble inference.
 """
 import json
 import os
@@ -15,6 +16,7 @@ import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import joblib  # <-- ĐÃ THÊM: Để lưu SelectKBest và Meta-learner
 
 import lightgbm as lgb
 from sklearn.linear_model import LogisticRegression
@@ -98,9 +100,6 @@ def load_split(fold: int):
 
 # ── LightGBM classifier ─────────────────────────────────────────────────────
 
-# LightGBM params are now provided centrally via `CFG.lgbm_params` in config.py
-
-
 def train_lgbm(X_train, y_train, X_val, y_val, num_rounds=None):
     """Train a LightGBM model with early stopping."""
     if num_rounds is None:
@@ -162,6 +161,10 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
     if k_features is None:
         k_features = CFG.feature_selection_k
     run_dir.mkdir(parents=True, exist_ok=True)
+    
+    models_dir = run_dir / "saved_models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+
     id2idx = data["id2idx"]
     labels = data["labels"]
 
@@ -176,18 +179,16 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
         X_train, y_train = X_all[train_idx], labels[train_idx]
         X_test, y_test = X_all[test_idx], labels[test_idx]
 
-        # ─── BẮT ĐẦU: FEATURE SELECTION ───
-        # Chọn k đặc trưng tốt nhất. Nếu số feature ban đầu < k thì lấy toàn bộ.
         actual_k = min(k_features, X_train.shape[1])
         if actual_k < X_train.shape[1]:
-            # Dùng f_classif (ANOVA F-value) để chấm điểm mức độ quan trọng
             selector = SelectKBest(score_func=f_classif, k=actual_k)
-            # CHÚ Ý: Chỉ fit trên tập Train để tránh Data Leakage
             X_train = selector.fit_transform(X_train, y_train)
             X_test = selector.transform(X_test)
-        # ─── KẾT THÚC: FEATURE SELECTION ───
+            joblib.dump(selector, models_dir / f"selector_fold_{fold}.joblib")
 
         model = train_lgbm(X_train, y_train, X_test, y_test)
+        model.save_model(str(models_dir / f"lgbm_fold_{fold}.txt"))
+
         y_prob = predict_lgbm(model, X_test)
 
         metrics = compute_binary_metrics(y_test, y_prob, threshold=CFG.classification_threshold)
@@ -202,11 +203,8 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
                 "y_prob": float(y_prob[i]),
             })
 
-        # Cập nhật phần lưu Feature Importance để biết chính xác cột nào được giữ lại
         if fold == 0 and hasattr(model, "feature_importance"):
             imp = model.feature_importance(importance_type="gain")
-            
-            # Lấy index gốc của các feature đã được giữ lại
             if actual_k < X_all.shape[1]:
                 selected_indices = selector.get_support(indices=True)
             else:
@@ -214,13 +212,12 @@ def run_single_experiment(name: str, X_all: np.ndarray, data: dict, run_dir: Pat
 
             write_json(run_dir / "feature_importance_fold0.json", {
                 "importance_gain": imp.tolist(),
-                "selected_original_indices": selected_indices.tolist() # Rất quan trọng cho bài báo
+                "selected_original_indices": selected_indices.tolist() 
             })
 
         print(f"  Fold {fold}: acc={metrics['accuracy']:.3f} "
               f"f1={metrics['f1_pos']:.3f} auc={metrics['roc_auc']:.3f}")
 
-    # Aggregate
     agg = aggregate_metrics(fold_metrics)
     write_json(run_dir / "metrics_per_fold.json", fold_metrics)
     write_json(run_dir / "metrics_aggregated.json", agg)
@@ -251,18 +248,19 @@ def run_fusion_experiment(data: dict, run_dir: Path):
     Fusion B: stack text-only & image-only probabilities (late fusion with multiple strategies)
     """
     run_dir.mkdir(parents=True, exist_ok=True)
+    
+    base_models_dir = run_dir / "base_models_saved"
+    base_models_dir.mkdir(parents=True, exist_ok=True)
+
     id2idx = data["id2idx"]
     labels = data["labels"]
 
-    # ── Early fusion (all features → LightGBM) ──
     print("\n[C1] Early Fusion (all features → LightGBM)")
     run_single_experiment("EarlyFusion", data["all_feats"], data, run_dir / "early_fusion")
 
-    # ── Late fusion: Train base models first ──
     print(f"\n[C2] Late Fusion - Training base models...")
     from sklearn.feature_selection import SelectKBest, f_classif
 
-    # Store predictions from base models for all folds
     fold_predictions = []
 
     for fold in range(CFG.n_folds):
@@ -280,21 +278,24 @@ def run_fusion_experiment(data: dict, run_dir: Path):
         text_selector = SelectKBest(score_func=f_classif, k=min(100, X_text_tr.shape[1]))
         X_text_tr_sel = text_selector.fit_transform(X_text_tr, y_tr)
         X_text_te_sel = text_selector.transform(X_text_te)
+        joblib.dump(text_selector, base_models_dir / f"text_selector_fold_{fold}.joblib")
 
         img_selector = SelectKBest(score_func=f_classif, k=min(100, X_img_tr.shape[1]))
         X_img_tr_sel = img_selector.fit_transform(X_img_tr, y_tr)
         X_img_te_sel = img_selector.transform(X_img_te)
+        joblib.dump(img_selector, base_models_dir / f"img_selector_fold_{fold}.joblib")
 
         # Train base models
         text_model = train_lgbm(X_text_tr_sel, y_tr, X_text_te_sel, y_te)
         text_prob_tr = text_model.predict(X_text_tr_sel)
         text_prob_te = text_model.predict(X_text_te_sel)
+        text_model.save_model(str(base_models_dir / f"text_lgbm_fold_{fold}.txt"))
 
         img_model = train_lgbm(X_img_tr_sel, y_tr, X_img_te_sel, y_te)
         img_prob_tr = img_model.predict(X_img_tr_sel)
         img_prob_te = img_model.predict(X_img_te_sel)
+        img_model.save_model(str(base_models_dir / f"img_lgbm_fold_{fold}.txt"))
 
-        # Store for fusion
         fold_predictions.append({
             "fold": fold,
             "train_idx": train_idx,
@@ -307,7 +308,7 @@ def run_fusion_experiment(data: dict, run_dir: Path):
             "img_prob_te": img_prob_te,
         })
 
-        print(f"  Fold {fold}: Base models trained")
+        print(f"  Fold {fold}: Base models trained & saved")
 
     # ── Apply each fusion strategy ──
     print(f"\n[C2] Late Fusion - Testing {len(CFG.fusion_strategy)} strategies...")
@@ -317,9 +318,12 @@ def run_fusion_experiment(data: dict, run_dir: Path):
         strategy_dir = run_dir / f"late_fusion_{strategy}"
         strategy_dir.mkdir(parents=True, exist_ok=True)
         
+        meta_models_dir = strategy_dir / "saved_models"
+        if strategy == "stacking":
+            meta_models_dir.mkdir(parents=True, exist_ok=True)
+
         all_preds = []
         fold_metrics = []
-        meta_learners = []  # Store meta-learners for analysis
 
         for fold_data in fold_predictions:
             fold = fold_data["fold"]
@@ -328,7 +332,6 @@ def run_fusion_experiment(data: dict, run_dir: Path):
             text_prob_te = fold_data["text_prob_te"]
             img_prob_te = fold_data["img_prob_te"]
 
-            # Compute fusion predictions based on strategy
             if strategy == "stacking":
                 text_prob_tr = fold_data["text_prob_tr"]
                 img_prob_tr = fold_data["img_prob_tr"]
@@ -339,7 +342,9 @@ def run_fusion_experiment(data: dict, run_dir: Path):
                     text_prob_te, img_prob_te,
                 )
                 
-                # Store meta-learner weights for first fold
+                joblib.dump(meta_clf, meta_models_dir / f"meta_clf_fold_{fold}.joblib")
+                joblib.dump(scaler, meta_models_dir / f"scaler_fold_{fold}.joblib")
+
                 if fold == 0:
                     weights = meta_clf.coef_[0]
                     intercept = meta_clf.intercept_[0]
@@ -359,12 +364,10 @@ def run_fusion_experiment(data: dict, run_dir: Path):
             else:
                 raise ValueError(f"Unknown fusion strategy: {strategy}")
 
-            # Evaluate
             metrics = compute_binary_metrics(y_te, y_prob, threshold=0.5)
             metrics["fold"] = fold
             fold_metrics.append(metrics)
 
-            # Store predictions
             for i, idx in enumerate(test_idx):
                 all_preds.append({
                     "app_id": data["app_ids"][idx],
@@ -378,7 +381,6 @@ def run_fusion_experiment(data: dict, run_dir: Path):
             print(f"    Fold {fold}: acc={metrics['accuracy']:.3f} "
                   f"f1={metrics['f1_pos']:.3f} auc={metrics['roc_auc']:.3f}")
 
-        # Save results for this strategy
         agg = aggregate_metrics(fold_metrics)
         write_json(strategy_dir / "metrics_per_fold.json", fold_metrics)
         write_json(strategy_dir / "metrics_aggregated.json", agg)
@@ -441,10 +443,8 @@ def main():
     print("\n" + "=" * 60)
     print("Threshold search on predictions ...")
     
-    # Build list of paths to search
     search_paths = ["text_only", "image_only", "fusion/early_fusion"]
     
-    # Add all late fusion strategies
     for strategy in CFG.fusion_strategy:
         search_paths.append(f"fusion/late_fusion_{strategy}")
     
@@ -469,7 +469,7 @@ def main():
                   f"F1={agg['f1_pos_mean']:.4f}±{agg['f1_pos_std']:.4f}  "
                   f"ROC-AUC={agg['roc_auc_mean']:.4f}±{agg['roc_auc_std']:.4f}")
 
-    print("\nDone! Results saved to:", base_dir)
+    print("\nDone! Results & Models saved to:", base_dir)
 
 
 if __name__ == "__main__":

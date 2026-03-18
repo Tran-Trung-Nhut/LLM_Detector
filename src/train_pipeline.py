@@ -1,12 +1,3 @@
-"""
-run.py — One-command orchestrator for the full V2 pipeline.
-
-Usage (from project root):
-    python "[v2]src/run.py"                 # Full pipeline
-    python "[v2]src/run.py" --skip-ocr      # Skip OCR step
-    python "[v2]src/run.py" --skip-features # Skip feature extraction
-    python "[v2]src/run.py" --train-only    # Only train & evaluate
-"""
 import argparse
 import os
 import sys
@@ -30,7 +21,7 @@ def step_preprocess():
     print("\n" + "=" * 60)
     print("STEP 1: Preprocessing")
     print("=" * 60)
-    import preprocessing
+    import src.steps.preprocessing as preprocessing
     preprocessing.main()
 
 
@@ -43,7 +34,7 @@ def step_make_splits():
     print("\n" + "=" * 60)
     print("STEP 2: Create Splits")
     print("=" * 60)
-    import make_splits
+    import src.steps.make_splits as make_splits
     make_splits.main()
 
 
@@ -52,7 +43,7 @@ def step_ocr():
     print("\n" + "=" * 60)
     print("STEP 3: OCR")
     print("=" * 60)
-    import run_ocr
+    import src.steps.run_ocr as run_ocr
     run_ocr.main()
 
 
@@ -65,7 +56,7 @@ def step_extract_text_features():
     print("\n" + "=" * 60)
     print("STEP 4a: Extract Text Features")
     print("=" * 60)
-    import extract_text_features
+    import src.steps.extract_text_features as extract_text_features
     extract_text_features.main()
 
 
@@ -78,7 +69,7 @@ def step_extract_image_features():
     print("\n" + "=" * 60)
     print("STEP 4b: Extract Image Features")
     print("=" * 60)
-    import extract_image_features
+    import src.steps.extract_image_features as extract_image_features
     extract_image_features.main()
 
 def step_extract_slm_features():
@@ -90,7 +81,7 @@ def step_extract_slm_features():
     print("\n" + "=" * 60)
     print("STEP 4c: Extract SLM Reasoning Features")
     print("=" * 60)
-    import extract_slm_features
+    import src.steps.extract_slm_features as extract_slm_features
     extract_slm_features.main()
 
 
@@ -99,7 +90,7 @@ def step_train_evaluate():
     print("\n" + "=" * 60)
     print("STEP 5: Train & Evaluate")
     print("=" * 60)
-    import train_evaluate
+    import src.steps.train_evaluate as train_evaluate
     train_evaluate.main()
 
 
