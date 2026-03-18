@@ -65,7 +65,7 @@ Score:"""
     )
 
     # ── Feature cache ──
-    features_dir: str = "data/features_v2"
+    features_dir: str = "data/features"
 
     # ── Classifier ──
     classifier_type: str = "lightgbm"   # "lightgbm" or "xgboost"
@@ -154,7 +154,7 @@ Score:"""
 
     # ── Output ──
     runs_dir: str = "runs"
-    run_name: str = "v2_feature_fusion"
+    run_name: str = "feature_fusion"
 
     # ── Inference ──
     inference_test_features_dir: str = "data/features_test"
