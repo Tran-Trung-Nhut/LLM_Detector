@@ -1,8 +1,4 @@
-"""
-prior_correction.py — Prior-corrected precision (Table 14, Figure 5).
-
-Formula: Prec_pi(tau) = pi * TPR(tau) / (pi * TPR(tau) + (1 - pi) * FPR(tau))
-"""
+"""prior_correction.py — Prior-corrected precision (Table 14, Figure 5)."""
 import csv
 import os
 import sys
@@ -70,7 +66,6 @@ def main():
     pi_values = list(CFG.prior_pi_values)
     pi_range  = np.logspace(-3, -1, 200)
 
-    # Tau optimized on validation; TPR/FPR evaluated on test set
     val_paths = {
         "Text-Only":    base_dir / "text_only" / "validation_predictions.csv",
         "Early Fusion": base_dir / "fusion" / "early_fusion" / "validation_predictions.csv",

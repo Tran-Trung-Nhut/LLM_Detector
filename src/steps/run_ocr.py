@@ -1,6 +1,4 @@
-"""
-Run Tesseract OCR on all app screenshots. Reused from V1.
-"""
+"""run_ocr.py — Run Tesseract OCR on all app screenshots."""
 import json
 import os
 import sys

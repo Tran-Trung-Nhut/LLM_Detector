@@ -60,6 +60,23 @@ def main():
         "steps.robustness",
     )
 
+    results["6.10 Per-label-criterion"] = run_step(
+        "6.10 — Per-label-criterion evaluation (construct validity)",
+        "steps.per_label_criterion",
+    )
+    results["6.11 Image analysis"] = run_step(
+        "6.11 — Image branch helps/hurts qualitative analysis",
+        "steps.image_analysis_examples",
+    )
+    results["6.12 Keyword drift"] = run_step(
+        "6.12 — Keyword-drift robustness (remove model-name keywords)",
+        "steps.keyword_drift",
+    )
+    results["6.13 SHAP analysis"] = run_step(
+        "6.13 — SHAP feature importance (Text-Only + Early Fusion)",
+        "steps.shap_analysis",
+    )
+
     print_summary(results)
 
 

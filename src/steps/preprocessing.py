@@ -1,7 +1,4 @@
-"""
-Preprocessing: clean text, deduplicate images, build unified text field.
-Reused from V1 with import path updated to [v2]src.config.
-"""
+"""preprocessing.py — Clean text, deduplicate images, and build unified text field."""
 import json
 import os
 import re
@@ -46,7 +43,6 @@ def clean_html(text):
     return text
 
 
-# Footer markers are now centralized in config.py
 FOOTER_MARKERS = list(CFG.footer_markers)
 
 

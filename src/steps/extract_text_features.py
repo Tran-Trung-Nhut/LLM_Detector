@@ -1,13 +1,4 @@
-"""
-extract_text_features.py — Text branch feature extraction.
-
-Extracts three types of text features per app:
-  1. Sentence-BERT embedding of the cleaned description  (1024-d for BGE-large)
-  2. Keyword match features  (count, weighted score, per-category binary)
-  3. Handcrafted metadata features  (description length, category one-hot, etc.)
-
-Output: one .npz file per app_id stored under features_dir/text/
-"""
+"""extract_text_features.py — SBERT + keyword + metadata feature extraction for the text branch."""
 import os
 import re
 import math
@@ -28,17 +19,8 @@ from config import CFG
 from utils.io import read_jsonl
 
 
-# ── Keyword feature helpers ──────────────────────────────────────────────────
 def compute_keyword_features(text: str) -> np.ndarray:
-    """
-    Return a feature vector from keyword matching on *text*.
-      - total keyword hit count  (1)
-      - log(1 + count)           (1)
-      - per-category binary      (5 categories)
-      - per-category count       (5 categories)
-      - max keyword match length (1, proxy for specificity)
-    Total: 13 features
-    """
+    """Return a 13-dim keyword feature vector (count, log-count, per-category binary/count, max-kw-len)."""
     lower = text.lower()
 
     total_count = 0
@@ -67,20 +49,8 @@ def compute_keyword_features(text: str) -> np.ndarray:
     return np.array(feats, dtype=np.float32)
 
 
-# ── Handcrafted metadata features ────────────────────────────────────────────
-
-
 def compute_meta_features(record: dict) -> np.ndarray:
-    """
-    Handcrafted features from metadata fields.
-      - description length (chars)       (1)
-      - short_description length          (1)
-      - title length                      (1)
-      - has recent_changes                (1)
-      - num images                        (1)
-      - category one-hot                  (len(CFG.top_categories) + 1 for 'other')
-    Total: 5 + 16 = 21 features
-    """
+    """Return a 21-dim metadata feature vector (lengths, has-changes, n-images, category one-hot)."""
     desc = record.get("description", "") or ""
     short = record.get("short_description", "") or ""
     title = record.get("title", "") or ""
@@ -106,8 +76,6 @@ def compute_meta_features(record: dict) -> np.ndarray:
     return np.array(feats, dtype=np.float32)
 
 
-# ── Sentence-BERT embedding ──────────────────────────────────────────────────
-
 def load_text_model():
     tokenizer = AutoTokenizer.from_pretrained(CFG.text_model)
     model = AutoModel.from_pretrained(CFG.text_model, dtype=torch.float16)
@@ -131,22 +99,17 @@ def encode_texts(texts: list[str], tokenizer, model, device,
         ).to(device)
         with torch.no_grad():
             outputs = model(**encoded)
-        # Mean pooling over non-padding tokens
         mask = encoded["attention_mask"].unsqueeze(-1).float()
         embeds = (outputs.last_hidden_state * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
         all_embeds.append(embeds.cpu().float().numpy())
     return np.concatenate(all_embeds, axis=0)
 
 
-# ── Main extraction ──────────────────────────────────────────────────────────
-
 def main():
-    """Extract and cache all text features."""
     rows = read_jsonl(CFG.dataset_path)
     out_dir = Path(CFG.features_dir) / "text"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) Keyword + metadata features (fast, CPU)
     print("Extracting keyword & metadata features ...")
     kw_feats, meta_feats, app_ids, labels = [], [], [], []
     for r in tqdm(rows, desc="keyword+meta"):
@@ -156,17 +119,15 @@ def main():
         kw_feats.append(compute_keyword_features(text))
         meta_feats.append(compute_meta_features(r))
 
-    kw_feats = np.stack(kw_feats)      # (N, 13)
-    meta_feats = np.stack(meta_feats)  # (N, 21)
+    kw_feats = np.stack(kw_feats)
+    meta_feats = np.stack(meta_feats)
 
-    # 2) Sentence-BERT embeddings (GPU)
     print(f"Loading text model: {CFG.text_model} ...")
     tokenizer, model, device = load_text_model()
     texts = [r.get("text", "") for r in rows]
     print(f"Encoding {len(texts)} texts ...")
-    sbert_feats = encode_texts(texts, tokenizer, model, device, CFG.text_batch_size)  # (N, 1024)
+    sbert_feats = encode_texts(texts, tokenizer, model, device, CFG.text_batch_size)
 
-    # 3) Save
     np.savez_compressed(
         out_dir / "features.npz",
         app_ids=np.array(app_ids),

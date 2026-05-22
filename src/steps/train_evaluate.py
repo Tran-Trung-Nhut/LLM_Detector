@@ -48,7 +48,6 @@ def load_features():
     ocr       = imd["ocr"]
 
     assert list(td["app_ids"]) == list(imd["app_ids"]), "Feature files must have same app order"
-
     text_feats = np.concatenate([sbert, keywords, meta], axis=1)
     image_feats = np.concatenate([clip_mean, clip_max, zeroshot, ocr], axis=1)
     all_feats = np.concatenate([text_feats, image_feats], axis=1)
@@ -355,10 +354,10 @@ def run_fusion_experiment(data: dict, run_dir: Path):
     id2idx = data["id2idx"]
     labels = data["labels"]
 
-    print("\n[C1] Early Fusion (all features → LightGBM)")
+    print("\n[C1] Early Fusion")
     run_single_experiment("EarlyFusion", data["all_feats"], data, run_dir / "early_fusion")
 
-    print(f"\n[C2] Late Fusion - Training base models (strict OOF protocol)...")
+    print(f"\n[C2] Late Fusion — building base models...")
     fold_predictions = []
 
     for fold in range(CFG.n_folds):
@@ -557,11 +556,7 @@ def run_fusion_experiment(data: dict, run_dir: Path):
 
 
 def run_ablation_experiment(data: dict, run_dir: Path):
-    """Ablation study on text-branch feature components.
-
-    Tests all 7 subsets of {SBERT, Handcrafted (Keywords+Meta), SLM} to
-    quantify each component's individual contribution.
-    """
+    """Ablation study on text-branch feature subsets (SBERT, Handcrafted, SLM)."""
     run_dir.mkdir(parents=True, exist_ok=True)
 
     handcrafted = np.concatenate([data["keywords"], data["meta"]], axis=1)
@@ -572,7 +567,7 @@ def run_ablation_experiment(data: dict, run_dir: Path):
     ablation_configs: dict[str, np.ndarray] = {
         "sbert_only":        data["sbert"],
         "handcrafted_only":  handcrafted,
-        "sbert_handcrafted": data["text_feats"],  # canonical text_feats = SBERT+Keywords+Meta
+        "sbert_handcrafted": data["text_feats"],
     }
     if has_slm:
         ablation_configs["slm_only"]          = slm_score
@@ -598,9 +593,7 @@ def run_ablation_experiment(data: dict, run_dir: Path):
 
     write_json(run_dir / "ablation_summary.json", summary)
 
-    print("\n" + "=" * 74)
-    print("ABLATION STUDY — Text Branch Components")
-    print("=" * 74)
+    print("\nABLATION STUDY — Text Branch Components")
     print(f"  {'Config':<28} {'Dims':>5}  {'ROC-AUC':>14}  {'F1':>14}")
     print("  " + "-" * 68)
     for name, r in summary.items():
@@ -616,7 +609,6 @@ def main():
     set_seed(CFG.seed)
     base_dir = Path(CFG.runs_dir) / CFG.run_name
 
-    print("Loading features ...")
     data = load_features()
     n = len(data["app_ids"])
     print(
@@ -625,32 +617,23 @@ def main():
         f"all_feats={data['all_feats'].shape[1]}d"
     )
 
-    print("\n" + "=" * 60)
-    print("[A] Text-Only Classifier")
-    print("=" * 60)
+    print("\n[A] Text-Only Classifier")
     run_single_experiment("TextOnly", data["text_feats"], data, base_dir / "text_only")
 
-    print("\n" + "=" * 60)
-    print("[B] Image-Only Classifier")
-    print("=" * 60)
+    print("\n[B] Image-Only Classifier")
     run_single_experiment("ImageOnly", data["image_feats"], data, base_dir / "image_only")
 
-    print("\n" + "=" * 60)
-    print("[C] Fusion Classifiers")
-    print("=" * 60)
+    print("\n[C] Fusion Classifiers")
     run_fusion_experiment(data, base_dir / "fusion")
 
     ablation_dir = base_dir / "ablation"
     if (ablation_dir / "ablation_summary.json").exists():
         print(f"\n[skip] Ablation already done at {ablation_dir}")
     else:
-        print("\n" + "=" * 60)
-        print("[D] Ablation Study — Text Branch")
-        print("=" * 60)
+        print("\n[D] Ablation Study — Text Branch")
         run_ablation_experiment(data, ablation_dir)
 
-    print("\n" + "=" * 60)
-    print("Validation-based threshold summary ...")
+    print("\nValidation-based threshold summary ...")
     search_paths = ["text_only", "image_only", "fusion/early_fusion"]
     for strategy in CFG.fusion_strategy:
         search_paths.append(f"fusion/late_fusion_{strategy}")
@@ -665,9 +648,7 @@ def main():
                 f"acc={best['accuracy']:.3f} f1={best['f1_pos']:.3f}"
             )
 
-    print("\n" + "=" * 60)
-    print("SUMMARY: Late Fusion Strategy Comparison")
-    print("=" * 60)
+    print("\nSUMMARY: Late Fusion Strategy Comparison")
     for strategy in CFG.fusion_strategy:
         strategy_dir = base_dir / "fusion" / f"late_fusion_{strategy}"
         agg_path = strategy_dir / "metrics_aggregated.json"

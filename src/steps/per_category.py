@@ -35,7 +35,6 @@ def main():
     out_dir  = base_dir / "per_category"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load category from test set, not training set
     app_category = {}
     test_dataset_path = Path(CFG.raw_inference_dataset_path)
     if not test_dataset_path.exists():
@@ -55,7 +54,6 @@ def main():
 
     sv_preds = load_pred_with_id(sv_csv)
 
-    # Build text_only predictions from text_prob in soft_voting CSV
     to_preds = {}
     with open(sv_csv, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):

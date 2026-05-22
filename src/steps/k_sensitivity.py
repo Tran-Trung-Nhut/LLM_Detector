@@ -1,10 +1,4 @@
-"""
-k_sensitivity.py — Grid search for SelectKBest k on text features.
-
-Runs TextOnly classifier for each k in CFG.k_sensitivity_values to justify
-the chosen CFG.feature_selection_k value. No retraining of feature extractors
-needed — uses pre-computed features.
-"""
+"""k_sensitivity.py — Grid search over SelectKBest k on text features to justify the chosen k value."""
 import os
 import re
 import sys
@@ -29,14 +23,9 @@ def main():
     base_dir = Path(CFG.runs_dir) / CFG.run_name / "k_sensitivity"
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    print("=" * 60)
-    print("  K Sensitivity Analysis — Text Features")
-    print("=" * 60)
-
     data = load_features()
     n_dims = data["text_feats"].shape[1]
-    print(f"  Text feature dims: {n_dims}")
-    print(f"  Current CFG.feature_selection_k: {CFG.feature_selection_k}")
+    print(f"  Text feature dims: {n_dims}, current k: {CFG.feature_selection_k}")
 
     k_candidates = list(CFG.k_sensitivity_values) + [n_dims]
     k_candidates = sorted(set(k_candidates))
@@ -62,9 +51,7 @@ def main():
 
     write_json(base_dir / "summary.json", summary)
 
-    print("\n" + "=" * 74)
-    print("K SENSITIVITY — Text Features (TextOnly classifier)")
-    print("=" * 74)
+    print("\nK SENSITIVITY — Text Features (TextOnly classifier)")
     print(f"  {'k':>12}  {'ROC-AUC':>14}  {'F1':>14}")
     print("  " + "-" * 60)
     for label, r in summary.items():

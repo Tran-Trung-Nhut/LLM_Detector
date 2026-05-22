@@ -1,17 +1,4 @@
-"""
-latency_benchmark.py — Table 16: Per-app inference latency measurement.
-
-Measures mean wall-clock time per app on the 110-app independent test set.
-Requires data/features_test/ (run independent_test_eval.py pipeline first).
-
-Components measured:
-  1. BGE text encoding (per app)
-  2. CLIP image encoding (4 screenshots, k-medoids selected)
-  3. OCR extraction (4 screenshots, Tesseract)
-  4. LightGBM inference (text + image branches)
-  5. Fusion (score-max)
-  6. Total end-to-end
-"""
+"""latency_benchmark.py — Table 16: Per-app inference latency for all pipeline components."""
 import json
 import os
 import sys
@@ -153,16 +140,9 @@ def main():
 
     results = {}
 
-    print("  Timing BGE encoding...")
     results["bge_encode_s_per_app"] = round(time_bge_encoding(records), 4)
-
-    print(f"  Timing CLIP encoding ({CFG.latency_n_screenshots} screenshots)...")
     results["clip_encode_s_per_app"] = round(time_clip_encoding(records), 4)
-
-    print(f"  Timing OCR ({CFG.latency_n_screenshots} screenshots)...")
     results["ocr_s_per_app"] = round(time_ocr(records), 4)
-
-    print("  Timing LightGBM inference...")
     results.update(time_lgbm_inference(n_apps=110))
 
     results["total_s_per_app"] = round(

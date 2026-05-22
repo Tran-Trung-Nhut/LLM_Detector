@@ -4,7 +4,6 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure project root is CWD and [v2]src is on sys.path
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _SCRIPT_DIR.parent
 os.chdir(_PROJECT_ROOT)
@@ -38,9 +37,7 @@ def step_download_training_images() -> list[Path]:
         print(f"[skip] Raw dataset not found at {raw_path}")
         return []
 
-    print("\n" + "=" * 60)
-    print("STEP 0: Ensure Training Images")
-    print("=" * 60)
+    print("\n[STEP 0] Ensure Training Images")
 
     rows = []
     with open(raw_path, "r", encoding="utf-8") as f:
@@ -133,9 +130,7 @@ def step_cleanup_downloaded_images(downloaded_paths: list[Path]) -> None:
         print("\n[skip] Cleanup downloaded images: nothing new was downloaded")
         return
 
-    print("\n" + "=" * 60)
-    print("CLEANUP: Remove Downloaded Training Images")
-    print("=" * 60)
+    print("\n[CLEANUP] Remove Downloaded Training Images")
 
     images_root = _resolve_abs_path(CFG.images_dir)
     removed_files = 0
@@ -175,9 +170,7 @@ def step_preprocess():
     if Path(CFG.dataset_path).exists():
         print(f"[skip] {CFG.dataset_path} already exists")
         return
-    print("\n" + "=" * 60)
-    print("STEP 1: Preprocessing")
-    print("=" * 60)
+    print("\n[STEP 1] Preprocessing")
     from steps import preprocessing
     preprocessing.main()
 
@@ -188,18 +181,14 @@ def step_make_splits():
     if split_file.exists():
         print(f"[skip] Splits already exist in {CFG.splits_dir}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 3: Create Splits")
-    print("=" * 60)
+    print("\n[STEP 3] Create Splits")
     from steps import make_splits
     make_splits.main()
 
 
 def step_ocr():
     """Step 2: Run Tesseract OCR on screenshots."""
-    print("\n" + "=" * 60)
-    print("STEP 2: OCR")
-    print("=" * 60)
+    print("\n[STEP 2] OCR")
     from steps import run_ocr
     run_ocr.main()
 
@@ -210,9 +199,7 @@ def step_extract_text_features():
     if feat_path.exists():
         print(f"[skip] Text features already cached at {feat_path}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 4a: Extract Text Features")
-    print("=" * 60)
+    print("\n[STEP 4a] Extract Text Features")
     from steps import extract_text_features
     extract_text_features.main()
 
@@ -223,9 +210,7 @@ def step_extract_image_features():
     if feat_path.exists():
         print(f"[skip] Image features already cached at {feat_path}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 4b: Extract Image Features")
-    print("=" * 60)
+    print("\n[STEP 4b] Extract Image Features")
     from steps import extract_image_features
     extract_image_features.main()
 
@@ -235,18 +220,14 @@ def step_extract_slm_features():
     if feat_path.exists():
         print(f"[skip] SLM features already cached at {feat_path}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 4c: Extract SLM Reasoning Features")
-    print("=" * 60)
+    print("\n[STEP 4c] Extract SLM Reasoning Features")
     from steps import extract_slm_features
     extract_slm_features.main()
 
 
 def step_train_evaluate():
     """Step 5: Train classifiers, ablation study, and α grid search."""
-    print("\n" + "=" * 60)
-    print("STEP 5: Train & Evaluate (+ Ablation + α grid search)")
-    print("=" * 60)
+    print("\n[STEP 5] Train & Evaluate (+ Ablation + α grid search)")
     from steps import train_evaluate
     train_evaluate.main()
 
@@ -261,9 +242,7 @@ def step_k_sensitivity():
     if summary_path.exists():
         print(f"\n[skip] k sensitivity already done at {summary_path.parent}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 6: k Sensitivity Analysis")
-    print("=" * 60)
+    print("\n[STEP 6] k Sensitivity Analysis")
     from steps import k_sensitivity
     best_k = k_sensitivity.main()
     if best_k is not None and best_k != CFG.feature_selection_k:
@@ -277,9 +256,7 @@ def step_statistical_tests():
     if results_path.exists():
         print(f"\n[skip] Statistical tests already done at {results_path.parent}")
         return
-    print("\n" + "=" * 60)
-    print("STEP 7: Statistical Significance Tests")
-    print("=" * 60)
+    print("\n[STEP 7] Statistical Significance Tests")
     from steps import statistical_tests
     statistical_tests.main()
 
@@ -294,9 +271,7 @@ def main():
     parser.add_argument("--skip-k-sensitivity", action="store_true", help="Skip k sensitivity analysis")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("  V2 LLM Detector — Feature Fusion Pipeline")
-    print("=" * 60)
+    print("V2 LLM Detector — Feature Fusion Pipeline")
 
     downloaded_paths = []
     try:
@@ -332,9 +307,7 @@ def main():
             else:
                 step_cleanup_downloaded_images(downloaded_paths)
 
-    print("\n" + "=" * 60)
-    print("  Pipeline complete!")
-    print("=" * 60)
+    print("\nPipeline complete!")
 
 
 if __name__ == "__main__":

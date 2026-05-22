@@ -96,7 +96,6 @@ def main():
                     "y_prob": float(row["y_prob"]),
                 })
 
-        # Per-fold Platt: fit on inner-val_k, eval on outer-test_k (guaranteed disjoint)
         y_test_all, p_raw_all, p_platt_all = [], [], []
 
         for fold in range(CFG.n_folds):

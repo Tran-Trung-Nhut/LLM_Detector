@@ -45,8 +45,7 @@ App Description:
 Respond ONLY with a single confidence score between 0 and 100 indicating the probability of LLM integration. Do not output any other text, explanations, or words.
 Score:"""
 
-    # ── Image encoder ──
-    # CLIP ViT-L/14 @ 336px — higher resolution captures screenshot text
+    # CLIP ViT-L/14 @ 336px — higher resolution captures on-screen text in screenshots
     clip_model: str = "openai/clip-vit-large-patch14-336"
     clip_embed_dim: int = 768
     clip_batch_size: int = 16
@@ -148,7 +147,6 @@ Score:"""
         "Shopping", "Travel & Local", "Medical", "Music & Audio", "Photography",
     )
 
-    # ── Annotation & statistical tests ──
     iaa_csv: str = "data/inter_annotator.csv"
     code_validation_csv: str = "data/code_validation.csv"
     n_bootstrap: int = 2000
@@ -156,27 +154,22 @@ Score:"""
     prior_pi_values: tuple = (0.005, 0.01, 0.05)
     ece_n_bins: int = 10
 
-    # ── Test-set paths ──
     inference_manual_csv: str = "data/inference_manual.csv"
     features_test_dir: str = "data/features_test"
     features_test_trunc50_dir: str = "data/features_test_trunc50"
     trunc_desc_chars: int = 50
     temporal_d_cut: str = "2026-04-30"
 
-    # ── Latency benchmark ──
     latency_n_screenshots: int = 4
     latency_n_runs: int = 3
 
-    # ── Output ──
     runs_dir: str = "runs"
     run_name: str = "feature_fusion"
 
-    # ── Inference ──
     inference_features_dir: str = "data/features_test"
     inference_output_dir: str = "inference_results"
     inference_default_threshold: float = 0.5
 
-    # ── Misc ──
     hf_token: str = os.environ.get("HF_TOKEN", None)
 
 

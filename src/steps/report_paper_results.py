@@ -1,13 +1,4 @@
-"""
-report_paper_results.py — Ghi lại toàn bộ kết quả đã có trong paper main-v2.pdf.
-
-Mục đích: Thay vì chạy lại các thí nghiệm tốn kém (LLMAID, GPT-4o API,
-Gemini API, Qwen 7B GPU), script này lưu trực tiếp các con số đã được
-công bố trong paper để downstream scripts có thể đọc và tổng hợp.
-
-Chạy: python src/steps/report_paper_results.py
-Output: runs/feature_fusion/paper_reported_results/
-"""
+"""report_paper_results.py — Persist paper-published result tables to JSON for downstream comparison."""
 import os
 import sys
 from pathlib import Path
@@ -26,7 +17,6 @@ def main():
     out_dir = Path(CFG.runs_dir) / CFG.run_name / "paper_reported_results"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Table 7: Full Modality and Fusion Strategy Comparison (5-fold CV, τ=0.5) ──
     table7 = {
         "note": "5-fold CV, threshold=0.5, Table 7 of paper",
         "Text-Only":              {"accuracy": 0.809, "precision": 0.816, "recall": 0.704, "f1": 0.753, "roc_auc": 0.872, "pr_auc": 0.869},
@@ -38,7 +28,6 @@ def main():
     }
     write_json(out_dir / "table7_cv_results.json", table7)
 
-    # ── Table 8: Performance After Threshold Optimization (pooled inner-val, N=240) ──
     table8 = {
         "note": "Threshold-optimized on pooled inner-validation (N=240), Table 8 of paper",
         "Text-Only":    {"threshold": 0.41, "accuracy": 0.842, "precision": 0.816, "recall": 0.800, "f1": 0.808, "roc_auc": 0.906, "pr_auc": 0.898},
@@ -50,8 +39,6 @@ def main():
     }
     write_json(out_dir / "table8_threshold_optimized.json", table8)
 
-    # ── Table 12: External baselines vs LLMDroid (Independent test set, N=110, N+=44) ──
-    # Source: paper Table 12. Recall column includes Clopper-Pearson 95% CI.
     table12 = {
         "note": "Independent test set N=110 (44 positives). Table 12 of paper. Recall CI is Clopper-Pearson 95%.",
         "External baselines": {
@@ -71,8 +58,6 @@ def main():
     }
     write_json(out_dir / "table12_external_baselines.json", table12)
 
-    # ── Table 19: LLMAID code-level validation (N_code=80) ──
-    # LLMAID is an external tool (Liu et al. [15]), results are from the paper.
     table19 = {
         "note": "LLMAID code-level validation on N_code=80 apps. Table 19 of paper. LLMAID is an external tool (Liu et al.).",
         "Listing label":         {"accuracy": 0.875, "precision": 0.886, "recall": 0.886, "f1": 0.886},
@@ -82,7 +67,6 @@ def main():
     }
     write_json(out_dir / "table19_llmaid_validation.json", table19)
 
-    # ── Table 16: Inference latency per app ──
     table16 = {
         "note": "Mean wall-clock time per app on 110-app test set. API cost at published token rates. Table 16 of paper.",
         "LLMDroid components": {
@@ -103,7 +87,6 @@ def main():
     }
     write_json(out_dir / "table16_latency.json", table16)
 
-    # ── Table 3: Text feature ablation (5-fold CV, k=200) ──
     table3 = {
         "note": "Text branch ablation. 5-fold CV, k=200. Table 3 of paper.",
         "BGE only":              {"dims": 1024, "roc_auc": "0.8079±0.0695", "f1": "0.6820±0.0842"},
@@ -116,7 +99,6 @@ def main():
     }
     write_json(out_dir / "table3_text_ablation.json", table3)
 
-    # ── Table 5: Image branch leave-one-out ablation ──
     table5 = {
         "note": "Image branch leave-one-out ablation. 5-fold CV, k=200. Table 5 of paper.",
         "Full image branch (CLIP + chat + OCR)": {"dims": 1552, "roc_auc": "0.8246±0.0413", "delta_roc_auc": None},
@@ -126,7 +108,6 @@ def main():
     }
     write_json(out_dir / "table5_image_ablation.json", table5)
 
-    # ── Table 15: Temporal split ──
     table15 = {
         "note": "Temporal split D_cut=2025-06-01. Training=218 apps, Test=82 apps (33 positives). Table 15 of paper.",
         "Text-Only":    {"random_f1": 0.753, "temporal_f1": 0.708, "delta": -0.045, "roc_auc_temporal": 0.841},
@@ -137,7 +118,6 @@ def main():
     }
     write_json(out_dir / "table15_temporal.json", table15)
 
-    # ── Table 17: Probability calibration ──
     table17 = {
         "note": "Brier score and ECE on pooled CV held-out predictions (N=300). Table 17 of paper.",
         "Text-Only":    {"brier_raw": 0.158, "ece_raw": 0.094, "brier_platt": 0.149, "ece_platt": 0.041},
@@ -148,7 +128,6 @@ def main():
     }
     write_json(out_dir / "table17_calibration_paper.json", table17)
 
-    # ── Table 18: Robustness to missing modalities ──
     table18 = {
         "note": "Soft Voting on independent test set (N=110, 44 positives). Table 18 of paper.",
         "Full listing (baseline)":              {"recall": 0.977, "precision": 0.754, "f1": 0.851, "delta_f1": None},
@@ -158,18 +137,9 @@ def main():
     }
     write_json(out_dir / "table18_robustness_paper.json", table18)
 
-    # Print summary
-    print("=" * 60)
     print("Paper results saved to:", out_dir)
-    print("=" * 60)
-    print("\nFiles created:")
     for f in sorted(out_dir.glob("*.json")):
         print(f"  {f.name}")
-    print("\nNOTE: These are numbers directly from main-v2.pdf.")
-    print("They do NOT need to be re-run. They serve as:")
-    print("  1. Reference to verify reproducibility of core pipeline")
-    print("  2. Results for experiments that are too expensive to re-run")
-    print("     (LLMAID, GPT-4o API, Gemini API, Qwen 7B GPU)")
 
 
 if __name__ == "__main__":

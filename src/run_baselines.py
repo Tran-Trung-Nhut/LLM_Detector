@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-Usage:
-  python src/run_baselines.py              # local only (Qwen + E2E)
-  python src/run_baselines.py --all        # local + API baselines
-  python src/run_baselines.py --skip-qwen
-  python src/run_baselines.py --skip-e2e
-
-API baselines require:
-  OPENAI_API_KEY  — GPT-4o-mini (zero-shot) + GPT-4o (6-shot)
-"""
+"""run_baselines.py — Runs Qwen, E2E, and optional API baselines (GPT-4o-mini, GPT-4o)."""
 import argparse
 import os
 import sys

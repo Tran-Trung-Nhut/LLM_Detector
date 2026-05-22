@@ -1,5 +1,0 @@
-comparison,delta_auc,ci95_lower,ci95_upper,p_bootstrap,p_delong,p_holm,p_bh,cliffs_delta,mcnemar_p
-early_fusion,0.01,-0.0287,0.0497,0.2955,0.6195,0.6195,0.6195,0.12,0.5218
-late_stacking,0.0372,0.0047,0.0715,0.0135,0.0325,0.13,0.13,0.68,0.8638
-late_score_max,0.0295,-0.0067,0.0676,0.056,0.1406,0.4218,0.2467,0.68,0.5254
-late_soft_voting,0.0259,-0.0111,0.0642,0.091,0.185,0.4218,0.2467,0.36,0.8875

@@ -1,15 +1,4 @@
-"""
-image_ablation.py — Table 5: Image branch leave-one-out ablation.
-
-Paper Section 4.8: leave-one-out ablation on the image branch
-under 5-fold CV protocol with k=200 feature selection.
-
-4 configurations:
-  1. Full: clip_mean(768) + clip_max(768) + zeroshot(1) + ocr(15) = 1552-d
-  2. -CLIP pooled: zeroshot(1) + ocr(15) = 16-d
-  3. -Zero-shot chatbot-UI: clip_mean(768) + clip_max(768) + ocr(15) = 1551-d
-  4. -OCR: clip_mean(768) + clip_max(768) + zeroshot(1) = 1537-d
-"""
+"""image_ablation.py — Image branch leave-one-out ablation under 5-fold CV."""
 import os
 import sys
 from pathlib import Path
@@ -36,16 +25,16 @@ def main():
 
     data = load_features()
 
-    clip_mean = data["clip_mean"]  # (N, 768)
-    clip_max  = data["clip_max"]   # (N, 768)
-    zeroshot  = data["zeroshot"]   # (N, 1)
-    ocr       = data["ocr"]        # (N, 15)
+    clip_mean = data["clip_mean"]
+    clip_max  = data["clip_max"]
+    zeroshot  = data["zeroshot"]
+    ocr       = data["ocr"]
 
     ablation_configs = {
-        "full_image_branch":   np.concatenate([clip_mean, clip_max, zeroshot, ocr], axis=1),  # 1552-d
-        "minus_clip_pooled":   np.concatenate([zeroshot, ocr], axis=1),                        # 16-d
-        "minus_zeroshot_chat": np.concatenate([clip_mean, clip_max, ocr], axis=1),             # 1551-d
-        "minus_ocr_features":  np.concatenate([clip_mean, clip_max, zeroshot], axis=1),        # 1537-d
+        "full_image_branch":   np.concatenate([clip_mean, clip_max, zeroshot, ocr], axis=1),
+        "minus_clip_pooled":   np.concatenate([zeroshot, ocr], axis=1),
+        "minus_zeroshot_chat": np.concatenate([clip_mean, clip_max, ocr], axis=1),
+        "minus_ocr_features":  np.concatenate([clip_mean, clip_max, zeroshot], axis=1),
     }
 
     summary = {}
@@ -73,9 +62,7 @@ def main():
 
     write_json(out_dir / "image_ablation_summary.json", summary)
 
-    print("\n" + "=" * 74)
-    print("IMAGE ABLATION — Image Branch Components (Table 5)")
-    print("=" * 74)
+    print("\nIMAGE ABLATION — Image Branch Components (Table 5)")
     print(f"  {'Config':<30} {'Dims':>5}  {'ROC-AUC':>14}  {'ΔROC-AUC':>10}")
     print("  " + "-" * 65)
     for name, r in summary.items():

@@ -1,12 +1,4 @@
-"""
-independent_test_eval.py — Tables 12 and 20.
-
-Evaluates the trained 5-fold ensemble on the independent test set (N=110).
-Expects:
-  data/features_test/text/features.npz
-  data/features_test/image/features.npz
-  runs/feature_fusion/fusion/base_models_saved/
-"""
+"""independent_test_eval.py — Evaluates the trained 5-fold ensemble on the independent test set (Tables 12 and 20)."""
 import os
 import sys
 from pathlib import Path
@@ -98,7 +90,6 @@ def main():
     img_probs  = np.mean(np.vstack(img_probs_folds),  axis=0)
     ef_probs   = np.mean(np.vstack(ef_probs_folds),   axis=0) if ef_probs_folds else np.zeros(len(test_ids))
 
-    # max(avg) ≠ avg(max) — apply max per fold before averaging
     score_max_probs = np.mean(
         np.vstack([np.maximum(t, i) for t, i in zip(text_probs_folds, img_probs_folds)]),
         axis=0,
@@ -106,7 +97,6 @@ def main():
 
     stack_probs = np.mean(np.vstack(stack_probs_folds), axis=0) if stack_probs_folds else np.zeros(len(test_ids))
 
-    # α·avg_t + (1-α)·avg_i = avg(α·t_k + (1-α)·i_k), so averaging branches first is exact
     sv_alpha_path = base_fus / "late_fusion_soft_voting" / "alpha_grid_search.json"
     alpha = 0.5
     if sv_alpha_path.exists():
@@ -114,7 +104,6 @@ def main():
             alpha = json.load(f).get("mean_alpha", 0.5)
     soft_voting_probs = alpha * text_probs + (1.0 - alpha) * img_probs
 
-    # Load ground-truth labels from inference_manual.csv (overrides -1 placeholders in NPZ)
     label_csv = Path(CFG.inference_manual_csv)
     if label_csv.exists():
         import csv as _csv
@@ -133,6 +122,7 @@ def main():
 
     strategies = {
         "Text-Only":    text_probs,
+        "Image-Only":   img_probs,
         "Early Fusion": ef_probs,
         "Score-Max":    score_max_probs,
         "Soft Voting":  soft_voting_probs,
