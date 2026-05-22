@@ -2,7 +2,7 @@
 
 **Multimodal screening for LLM-integrated Android apps — no APK required.**
 
-LLMDroid flags likely LLM-powered apps (ChatGPT, Claude, Gemini, …) using only public app-store metadata: text descriptions and promotional screenshots.
+LLMDroid flags likely LLM-powered apps using only public app-store metadata: text descriptions and promotional screenshots.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -15,20 +15,20 @@ LLMDroid flags likely LLM-powered apps (ChatGPT, Claude, Gemini, …) using only
 ```
 App listing (title + description + screenshots)
         │
-        ├─ Text branch ──── BGE-large-en-v1.5 (1024-d)
-        │                   + LLM keyword features (13-d)
+        ├─ Text branch ──── BGE-large-en-v1.5 (1024-d SBERT)
+        │                   + keyword features (13-d)
         │                   + metadata features (21-d)
         │
-        └─ Image branch ─── CLIP ViT-L/14 mean+max (1536-d)
+        └─ Image branch ─── CLIP ViT-L/14-336 mean+max (1536-d)
                             + zero-shot chat-UI score (1-d)
                             + OCR keyword features (15-d)
                                     │
                                     ▼
-                    Fusion → LightGBM (SelectKBest k=200)
-                    Score-Max / Soft Voting / Stacking / Early Fusion
+                    LightGBM + SelectKBest (k=200)
+                    Fusion: Score-Max / Soft Voting / Stacking / Early Fusion
 ```
 
-**5-fold CV on 300 apps · Independent test N=110 · ROC-AUC up to 0.938**
+**5-fold CV on 298 apps · Independent test N=110 · ROC-AUC up to 0.948**
 
 ---
 
@@ -57,48 +57,86 @@ python src/train_pipeline.py
 
 | Step | What happens | Skip flag |
 |------|-------------|-----------|
-| 0 | Download screenshots from Google Play | `--skip-image-download` |
+| 0 | Download missing screenshots from Google Play | `--skip-image-download` |
 | 1 | Preprocess text (clean HTML, dedup images) | — |
 | 2 | OCR screenshots via Tesseract | `--skip-ocr` |
-| 3 | Create 5-fold stratified splits | — |
-| 4a | Extract text features (BGE + keywords) | `--skip-features` |
-| 4b | Extract image features (CLIP + OCR) | `--skip-features` |
+| 3 | Create stratified 5-fold splits | — |
+| 4a | Extract text features (BGE-large + keywords + meta) | `--skip-features` |
+| 4b | Extract image features (CLIP + zero-shot + OCR) | `--skip-features` |
+| 4c | Extract SLM features (Qwen2.5-1.5B, ablation only) | `--skip-features` |
+| — | k-sensitivity for SelectKBest | `--skip-k-sensitivity` |
 | 5 | Train & evaluate all fusion strategies | — |
-| 6 | k-sensitivity analysis | `--skip-k-sensitivity` |
-| 7 | Statistical significance tests | — |
 
-If features are already cached (`data/features/*.npz`), skip straight to training:
+Downloaded screenshots are deleted automatically after training unless `--keep-images` is passed.
+
+If features are already cached (`data/features/`), jump straight to training:
 
 ```bash
 python src/train_pipeline.py --train-only
 ```
 
-### 2 — Post-training analysis
+### 2 — Evaluate on independent test set
+
+This is a **required** pre-step before running analysis. Run it once after training:
+
+```bash
+python src/steps/independent_test_eval.py
+```
+
+Outputs predictions for all strategies (Text-Only, Image-Only, Early Fusion, Soft Voting, Stacking, Score-Max) to `runs/feature_fusion/independent_test/`.
+
+### 3 — Post-training analysis
 
 ```bash
 python src/run_analysis.py
 ```
 
-### 3 — Baselines
+| Step | What |
+|------|------|
+| 6.1 | Statistical significance tests (DeLong + bootstrap F1) |
+| 6.2 | Branch complementarity |
+| 6.3 | Disagreement accuracy |
+| 6.4 | Per-category performance |
+| 6.5 | Prior-corrected precision |
+| 6.6 | Temporal split |
+| 6.7 | Inference latency benchmark |
+| 6.8 | Probability calibration |
+| 6.9 | Robustness to missing modalities |
+| 6.10 | Per-label-criterion evaluation (construct validity) |
+| 6.11 | Image branch helps/hurts qualitative analysis |
+| 6.12 | Keyword-drift robustness (remove model-name keywords) |
+| 6.13 | SHAP feature importance (Text-Only + Early Fusion) |
+
+### 4 — Baselines
 
 ```bash
-export OPENAI_API_KEY=sk-...
+# Local models only (Qwen2.5-7B + E2E transformer)
 python src/run_baselines.py
+
+# Include API baselines (GPT-4o-mini zero-shot + GPT-4o 6-shot)
+export OPENAI_API_KEY=sk-...
+python src/run_baselines.py --all
 ```
 
-### 4 — Inference on new apps
+Flags: `--skip-qwen`, `--skip-e2e`, `--skip-local`, `--no-latency`.
+
+### 5 — Inference on new apps
 
 ```bash
-# From raw JSONL
+# From raw JSONL (runs full pipeline: preprocess → OCR → features → predict)
 python src/run_inference.py --input-raw data/apps_inference_raw.jsonl --output results/
 
 # From pre-extracted features
 python src/run_inference.py --input data/features_test --output results/
 ```
 
+Flags: `--skip-preprocessing`, `--skip-ocr`, `--keep-images`, `--keep-artifacts`.
+
+Output per strategy: `early_fusion_inference.csv`, `stacking_inference.csv`, `soft_voting_inference.csv`, `score_max_inference.csv`.
+
 ---
 
-## Annotation pipelines (independent)
+## Annotation pipelines
 
 ### Inter-annotator agreement
 
@@ -128,9 +166,10 @@ python src/run_code_validation.py
 | File | Description |
 |------|-------------|
 | `data/apps_raw.jsonl` | Training apps with labels and image paths |
-| `data/apps_inference_raw.jsonl` | Apps to run inference on |
-| `data/inference_manual.csv` | Ground-truth labels for 110-app test set |
-| `data/images/{app_id}/*.png` | Screenshots (downloaded by Step 0 if missing) |
+| `data/apps_inference_raw.jsonl` | Apps for inference / independent test set |
+| `data/inference_manual.csv` | Ground-truth labels for 110-app test set (`pkg_name`, `label`) |
+| `data/inter_annotator.csv` | IAA data (`app_id`, `annotator1`, `annotator2`) |
+| `data/images/{app_id}/*.png` | Screenshots (auto-downloaded by Step 0 if missing) |
 
 ---
 
@@ -138,15 +177,30 @@ python src/run_code_validation.py
 
 ```
 runs/feature_fusion/
-├── fusion/base_models_saved/     ← LightGBM models (×5 folds)
-├── fusion/early_fusion/
-├── fusion/late_fusion_stacking/
-├── fusion/late_fusion_soft_voting/
-├── independent_test/
-├── statistical_tests/
+├── k_sensitivity/                ← SelectKBest k sweep
+├── text_only/                    ← text-branch CV results
+├── image_only/                   ← image-branch CV results
+├── ablation/                     ← feature ablation (text modalities)
+├── fusion/
+│   ├── base_models_saved/        ← LightGBM models (×5 folds, text + image)
+│   ├── early_fusion/
+│   ├── late_fusion_stacking/
+│   ├── late_fusion_soft_voting/
+│   └── late_fusion_score_max/
+├── independent_test/             ← predictions_*.csv, independent_test.json
+├── statistical_tests/            ← summary.csv, results.json
 ├── branch_complementarity/
+├── disagreement_accuracy/
+├── per_category/
+├── prior_correction/
 ├── temporal_split/
-└── robustness/
+├── latency/
+├── calibration/
+├── robustness/
+├── per_label_criterion/
+├── image_analysis/
+├── keyword_drift/
+└── shap_analysis/
 
 runs/cohen_kappa/
 ├── iaa.txt
@@ -157,10 +211,9 @@ runs/cohen_kappa/
 
 ## Reproduce from cached features
 
-If `data/features/` and `data/features_test/` are shared (e.g., via cloud):
-
 ```bash
 python src/train_pipeline.py --train-only
+python src/steps/independent_test_eval.py
 python src/run_analysis.py
 python src/run_baselines.py
 ```
