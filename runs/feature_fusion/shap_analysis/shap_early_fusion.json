@@ -1,0 +1,195 @@
+{
+  "top_30_features": [
+    {
+      "rank": 1,
+      "feature_name": "clip_mean_76",
+      "original_idx": 1134,
+      "mean_abs_shap": 0.251778
+    },
+    {
+      "rank": 2,
+      "feature_name": "kw_max_len",
+      "original_idx": 1036,
+      "mean_abs_shap": 0.208734
+    },
+    {
+      "rank": 3,
+      "feature_name": "clip_mean_135",
+      "original_idx": 1193,
+      "mean_abs_shap": 0.200344
+    },
+    {
+      "rank": 4,
+      "feature_name": "clip_mean_189",
+      "original_idx": 1247,
+      "mean_abs_shap": 0.127841
+    },
+    {
+      "rank": 5,
+      "feature_name": "clip_mean_26",
+      "original_idx": 1084,
+      "mean_abs_shap": 0.116831
+    },
+    {
+      "rank": 6,
+      "feature_name": "clip_mean_330",
+      "original_idx": 1388,
+      "mean_abs_shap": 0.093197
+    },
+    {
+      "rank": 7,
+      "feature_name": "sbert_223",
+      "original_idx": 223,
+      "mean_abs_shap": 0.083398
+    },
+    {
+      "rank": 8,
+      "feature_name": "clip_max_736",
+      "original_idx": 2562,
+      "mean_abs_shap": 0.082697
+    },
+    {
+      "rank": 9,
+      "feature_name": "clip_max_676",
+      "original_idx": 2502,
+      "mean_abs_shap": 0.08185
+    },
+    {
+      "rank": 10,
+      "feature_name": "sbert_537",
+      "original_idx": 537,
+      "mean_abs_shap": 0.081636
+    },
+    {
+      "rank": 11,
+      "feature_name": "clip_mean_168",
+      "original_idx": 1226,
+      "mean_abs_shap": 0.080257
+    },
+    {
+      "rank": 12,
+      "feature_name": "sbert_701",
+      "original_idx": 701,
+      "mean_abs_shap": 0.074592
+    },
+    {
+      "rank": 13,
+      "feature_name": "zeroshot_chatbot_ui",
+      "original_idx": 2594,
+      "mean_abs_shap": 0.070594
+    },
+    {
+      "rank": 14,
+      "feature_name": "clip_mean_568",
+      "original_idx": 1626,
+      "mean_abs_shap": 0.067908
+    },
+    {
+      "rank": 15,
+      "feature_name": "sbert_143",
+      "original_idx": 143,
+      "mean_abs_shap": 0.065906
+    },
+    {
+      "rank": 16,
+      "feature_name": "sbert_67",
+      "original_idx": 67,
+      "mean_abs_shap": 0.059083
+    },
+    {
+      "rank": 17,
+      "feature_name": "clip_max_505",
+      "original_idx": 2331,
+      "mean_abs_shap": 0.058528
+    },
+    {
+      "rank": 18,
+      "feature_name": "clip_mean_200",
+      "original_idx": 1258,
+      "mean_abs_shap": 0.056431
+    },
+    {
+      "rank": 19,
+      "feature_name": "kw_core_llm_hit",
+      "original_idx": 1028,
+      "mean_abs_shap": 0.055877
+    },
+    {
+      "rank": 20,
+      "feature_name": "sbert_946",
+      "original_idx": 946,
+      "mean_abs_shap": 0.055492
+    },
+    {
+      "rank": 21,
+      "feature_name": "sbert_814",
+      "original_idx": 814,
+      "mean_abs_shap": 0.055482
+    },
+    {
+      "rank": 22,
+      "feature_name": "clip_mean_605",
+      "original_idx": 1663,
+      "mean_abs_shap": 0.053597
+    },
+    {
+      "rank": 23,
+      "feature_name": "sbert_304",
+      "original_idx": 304,
+      "mean_abs_shap": 0.052252
+    },
+    {
+      "rank": 24,
+      "feature_name": "sbert_772",
+      "original_idx": 772,
+      "mean_abs_shap": 0.051981
+    },
+    {
+      "rank": 25,
+      "feature_name": "kw_total_count",
+      "original_idx": 1024,
+      "mean_abs_shap": 0.051853
+    },
+    {
+      "rank": 26,
+      "feature_name": "clip_max_532",
+      "original_idx": 2358,
+      "mean_abs_shap": 0.049917
+    },
+    {
+      "rank": 27,
+      "feature_name": "clip_mean_371",
+      "original_idx": 1429,
+      "mean_abs_shap": 0.048965
+    },
+    {
+      "rank": 28,
+      "feature_name": "clip_mean_527",
+      "original_idx": 1585,
+      "mean_abs_shap": 0.048578
+    },
+    {
+      "rank": 29,
+      "feature_name": "clip_max_424",
+      "original_idx": 2250,
+      "mean_abs_shap": 0.044844
+    },
+    {
+      "rank": 30,
+      "feature_name": "clip_mean_510",
+      "original_idx": 1568,
+      "mean_abs_shap": 0.042156
+    }
+  ],
+  "group_importance": {
+    "sbert": 1.448666,
+    "keyword": 0.342388,
+    "meta": 0.023504,
+    "clip_mean": 2.064233,
+    "clip_max": 1.194895,
+    "zeroshot": 0.070594,
+    "ocr": 0.0
+  },
+  "n_folds_aggregated": 5,
+  "n_samples_total": 298
+}

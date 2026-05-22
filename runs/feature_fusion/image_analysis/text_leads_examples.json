@@ -1,0 +1,57 @@
+[
+  {
+    "app_id": "app.awarefy.awarefyapp",
+    "y_true": 1,
+    "y_prob": 0.584655,
+    "text_prob": 0.949148,
+    "image_prob": 0.189788,
+    "title": "Awarefy: AI Mental Partner",
+    "category": "Health & Fitness",
+    "short_description": "A mental healthcare app that supports your emotional well-being and growth.",
+    "description_snippet": "Awarefy is an AI mental health partner app that supports you in your daily life, enhancing your awareness. The AI mental partner, Fy, assists you with your mental health care. It is equipped with comprehensive features based on psychological knowledge such as cognitive behavioral therapy and mindful"
+  },
+  {
+    "app_id": "com.kindermate.kai",
+    "y_true": 1,
+    "y_prob": 0.56676,
+    "text_prob": 0.924053,
+    "image_prob": 0.179693,
+    "title": "KinderMate for Kids Learning",
+    "category": "Parenting",
+    "short_description": "Interactive AI chats & curated videos for kids!",
+    "description_snippet": "Welcome to KinderMate, where your child's curiosity meets the brilliance of AI! Dive into the world of interactive learning and discovery with a GPT-powered child-friendly AI. Engage in meaningful conversations, fostering cognitive, linguistic, and social-emotional development.\r\n\r\nWHY KINDERMATE?\r\n\r"
+  },
+  {
+    "app_id": "com.testa.databot",
+    "y_true": 1,
+    "y_prob": 0.620511,
+    "text_prob": 0.943269,
+    "image_prob": 0.270856,
+    "title": "Voice Assistant DataBot AI",
+    "category": "Entertainment",
+    "short_description": "Databot voice assistant is your friend artificial intelligence!",
+    "description_snippet": "Voice assistant DataBot is the most friendly artificial intelligence app for android! Ask your friend robot AI anything you want, like Jarvis, the assistant answers with its voice to your requests upon topic you are interested in. Apps and services integrated inside the artificial intelligence of yo"
+  },
+  {
+    "app_id": "com.baek.Gatalk_market",
+    "y_true": 1,
+    "y_prob": 0.647957,
+    "text_prob": 0.952657,
+    "image_prob": 0.317866,
+    "title": "FakeTalk - AI Character GF BF",
+    "category": "Entertainment",
+    "short_description": "Bring your imaginary friends to life! Enjoy immersive AI conversations.",
+    "description_snippet": "Since 2012, FakeTalk has been pioneering custom character chat technology - connecting people to meaningful conversations once thought impossible.\r\nNow, powered by the latest AI, those conversations feel more real, emotional, and engaging than ever.\r\n\r\n\r\n● Your Perfect Character, Exactly the Way You"
+  },
+  {
+    "app_id": "com.tuya.smartlife",
+    "y_true": 1,
+    "y_prob": 0.579501,
+    "text_prob": 0.770184,
+    "image_prob": 0.372927,
+    "title": "SmartLife- Smart Living",
+    "category": "Lifestyle",
+    "short_description": "Smart Living",
+    "description_snippet": "「SmartLife」\r\nYour AI assistant for a simpler, smarter everyday life\r\n\r\n【Control】 Manage all your devices with a tap or just ask — it's that simple.\r\n\r\n【Security】 Real-time monitoring and smart alerts keep your home safe around the clock.\r\n\r\n【Energy】 Track usage and save on bills with intelligent ene"
+  }
+]

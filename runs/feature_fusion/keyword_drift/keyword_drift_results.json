@@ -1,0 +1,32 @@
+{
+  "cv_with_model_names": {
+    "f1_pos_mean": 0.7297,
+    "roc_auc_mean": 0.8592
+  },
+  "cv_without_model_names": {
+    "f1_pos_mean": 0.7118,
+    "roc_auc_mean": 0.8524
+  },
+  "indep_test_with_model_names": {
+    "f1_pos": 0.8506,
+    "roc_auc": 0.948
+  },
+  "indep_test_without_model_names": {
+    "f1_pos": 0.8667,
+    "roc_auc": 0.939
+  },
+  "delta_cv_f1": -0.0179,
+  "delta_cv_auc": -0.0068,
+  "delta_test_f1": 0.0161,
+  "delta_test_auc": -0.009,
+  "removed_keywords": [
+    "chatgpt",
+    "gpt-4",
+    "gpt-3",
+    "claude",
+    "gemini",
+    "copilot",
+    "llama",
+    "mistral"
+  ]
+}

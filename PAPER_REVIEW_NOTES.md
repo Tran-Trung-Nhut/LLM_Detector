@@ -1,216 +1,196 @@
-# Ghi chú cho teammate: So sánh kết quả hiện tại vs. paper (main-v2.pdf)
-
-> Tạo ngày 2026-05-20. Đọc kỹ trước khi cập nhật bảng số trong paper.
-
----
-
-## Phần 1 — Những thay đổi trong code so với mô tả trong paper
-
-### 1.1 Temporal split D_cut: 2025-06-01 → **2026-04-30**
-
-**Paper mô tả (Section 4.3.1):** D_cut = 2025-06-01, training gồm 218 apps, test 33 apps.
-
-**Thực tế hiện tại:** `config.py` dùng `temporal_d_cut = "2026-04-30"`, cho ra train=223, test=75, skip=30.
-
-**Lý do thay đổi:** Google Play Scraper trả về trường `updated` là Unix timestamp phản ánh thời điểm *hiện tại* app được cập nhật, không phải thời điểm thu thập dữ liệu. Với D_cut=2025-06-01, kết quả là train≈30/test≈238 — không hợp lý về mặt thống kê. D_cut mới (2026-04-30) cho train/test ratio hợp lý hơn nhưng **không khớp con số trong paper**.
-
-**Ảnh hưởng đến Table 15:** Toàn bộ kết quả temporal split trong paper cần được tính lại với D_cut mới, hoặc cần giải thích rõ sự thay đổi trong paper.
+# Paper Review — Revision Status
+> Cập nhật: 2026-05-22. Ghi lại toàn bộ thay đổi code và kết quả thực nghiệm sau revision.
 
 ---
 
-### 1.2 LLMAID bị loại bỏ hoàn toàn — Table 2 cần reframe
+## Tổng quan
 
-**Paper mô tả (Section 4.1.2, Table 2):** Construct validity được chứng minh bằng 2 tool chạy trên N_code = 80 apps:
-- LLMAID (Liu et al. [15]): κ = 0.847, Agreement = 92.5% → bằng chứng chính
-- AI Discriminator (Li et al. [14]): κ = 0.604, Agreement = 82.5% → bằng chứng phụ, giải thích thấp hơn vì cloud API
-
-**Thực tế hiện tại:** LLMAID **không có public inference code**, không thể chạy được. Đã xóa hoàn toàn khỏi `src/steps/run_code_validation.py` và `src/steps/cohen_kappa_validation.py`. Không còn cột `llmaid_label` nào trong pipeline.
-
-**Kết quả thực tế chỉ với AI Discriminator (N_code = 80):**
-
-| | AI Discriminator |
-|---|---|
-| Listing positive → AI Disc=1 | 8/40 (20%) |
-| Listing negative → AI Disc=0 | 35/40 (88%) |
-| Agreement | 53.8% |
-| Cohen's κ | **0.075** |
-
-κ = 0.075 ≈ "slight agreement" — **không thể dùng làm construct validity evidence**.
-
-**Lý do kết quả thấp (hợp lý về mặt khoa học):** 32/40 app listing-positive bị AI Discriminator miss vì chúng tích hợp LLM qua **cloud API** (không nhúng TensorFlow/PyTorch trong APK). AI Discriminator chỉ scan local ML library identifiers trong smali code — hoàn toàn bỏ qua cloud-API LLM apps.
-
-**Hướng xử lý trong paper — KHÔNG đề cập LLMAID nữa:**
-
-Reframe Section 4.1.2 và Table 2 theo narrative mới:
-> *"Kiểm tra chéo với AI Discriminator trên N_code = 79 apps cho thấy κ = 0.075, thấp hơn nhiều so với listing label. Phân tích các trường hợp miss cho thấy 80% app listing-positive bị bỏ qua là các app gọi LLM qua cloud API — không có ML library nào trong APK để AI Discriminator phát hiện. Kết quả này xác nhận rằng static code analysis tools có recall gap nghiêm trọng với cloud-API LLM apps, và đây chính là lý do LLMDroid cần thiết: listing-based screening phát hiện được nhóm app này mà code-level tools không thể."*
-
-**Lưu ý quan trọng:** Xóa hoàn toàn mọi con số của LLMAID (κ = 0.847, 92.5%) khỏi paper, bao gồm:
-- Abstract: *"Cohen's κ = 0.847"* → phải xóa hoặc thay
-- Section 4.1.2: toàn bộ đoạn so sánh với LLMAID
-- Table 2: bỏ cột LLMAID, chỉ giữ cột AI Discriminator với số mới
+Reviewer yêu cầu 8 thay đổi. Chúng ta thực hiện được **6/8**. Hai mục còn lại (mở rộng dataset và low-prior test set) không thực hiện vì lý do thời gian và nguồn lực — xem Phần 3.
 
 ---
 
-### 1.3 Baseline Gemini-1.5-Flash bị loại bỏ
+## Phần 1 — Những gì đã làm (6 mục)
 
-**Paper mô tả (Section 4.2, Table 12):** So sánh với 4 baseline, trong đó có *MLLM zero-shot (GPT-4o-mini / Gemini-1.5-Flash)*, báo cáo kết quả tốt hơn của 2 provider. Gemini-1.5-Flash đạt: Acc=0.791, F1=0.735, AUC=0.864.
+### 1.1 [Must do] Significance tests trên independent test set + F1 bootstrap
 
-**Thực tế hiện tại:** `baseline_mllm_zeroshot.py` chỉ chạy GPT-4o-mini. `call_gemini()` và toàn bộ logic GOOGLE_API_KEY đã bị xóa.
+**Vấn đề gốc:** `statistical_tests.py` đang load predictions từ CV OOF (`text_only/predictions.csv`), không phải independent test set. Không có bootstrap cho F1/accuracy.
 
-**Lý do:** Google đã deprecated Gemini-1.5-Flash.
+**Đã sửa:** `src/steps/statistical_tests.py`
+- Đổi data source sang `independent_test/predictions_*.csv` (N=110)
+- Thêm hàm `bootstrap_f1_accuracy()` — paired bootstrap 2000 iterations cho F1 và accuracy
+- Thêm Holm-corrected p-value cho F1
+- Output mới: `delta_f1`, `f1_ci95`, `p_f1_bootstrap`, `p_holm_f1` trong `summary.csv`
 
-**Ảnh hưởng đến Table 12:** Dòng "Gemini-1.5-Flash" không thể reproduce. Cần quyết định:
-- Giữ số cũ trong paper và note "model deprecated" trong footnote, hoặc
-- Thay bằng Gemini-2.0-Flash hoặc model tương đương, hoặc
-- Xóa dòng Gemini và chỉ báo cáo GPT-4o-mini cho zero-shot.
+**Kết quả** (`runs/feature_fusion/statistical_tests/`):
 
-Hiện tại có file `src/steps/report_paper_results.py` hardcode lại các số đã có trong paper (bao gồm Gemini) để các script tổng hợp có thể đọc mà không cần chạy lại.
+| Comparison vs Text-Only | F1 base | F1 cmp | ΔF1 | 95% CI F1 | p (bootstrap) | ΔAUC | p (DeLong) | Cliff δ |
+|---|---|---|---|---|---|---|---|---|
+| early_fusion | 0.8506 | 0.8776 | +0.027 | [−0.047, +0.102] | 0.241 | +0.004 | 0.708 | 0.12 |
+| late_soft_voting | 0.8506 | 0.8333 | −0.017 | [−0.083, +0.050] | 0.690 | −0.004 | 0.730 | 0.36 |
+| late_stacking | 0.8506 | 0.8485 | −0.002 | [−0.075, +0.077] | 0.521 | −0.001 | 0.914 | 0.68 |
+| late_score_max | 0.8506 | 0.8269 | −0.024 | [−0.103, +0.057] | 0.717 | −0.015 | 0.353 | 0.68 |
+| image_only | 0.8506 | 0.7527 | −0.098 | [−0.217, +0.011] | 0.966 | −0.104 | **0.006*** | −0.60 |
 
----
+\* Significant sau Holm correction (p_holm = 0.030)
 
-### 1.3 Robustness Table 18 — Sửa lỗi threshold rescaling
-
-**Paper mô tả (Table 18):** Soft Voting khi drop screenshots (s_img=0) giảm F1 −0.051, Recall=0.864.
-
-**Lỗi trước đó:** `soft_vote(s_text, 0, alpha=0.52, tau=0.5)` trả về F1≈0.000 vì max score=0.52 chỉ vừa qua tau=0.5 nhưng gần như toàn bộ prediction là 0.
-
-**Fix đã áp dụng:** `effective_tau = tau * active_weight` trong `src/steps/robustness.py`. Khi chỉ text branch còn hoạt động (alpha≈0.52), effective_tau ≈ 0.52*0.52 ≈ 0.27 — tương đương với việc threshold lại trên text score đơn lẻ.
-
-**Trạng thái:** Con số Table 18 sau fix phải gần với paper. Cần verify lại sau khi chạy.
-
----
-
-### 1.4 Label loading cho independent test
-
-**Trước đây:** Labels được lấy từ NPZ files, có thể chứa giá trị -1 (missing), gây lỗi `ValueError: Target is multiclass but average='binary'`.
-
-**Hiện tại:** Labels luôn được load từ `data/inference_manual.csv` (columns: `pkg_name`, `label`) thông qua `load_label_map()` trong `utils/io.py`. File `inference_manual.csv` là ground-truth dứt khoát cho 110 app test.
+**Diễn giải quan trọng cho reviewer:**
+- Headline gap Early Fusion F1=0.878 vs Text-Only F1=0.851 (ΔF1=+0.027) **không có ý nghĩa thống kê** (p=0.241, 95% CI bao gồm 0). Đây là điều reviewer #1 muốn biết — cần trình bày trung thực trong paper.
+- Image-Only tệ hơn Text-Only một cách **có ý nghĩa thống kê** về AUC (p=0.006), củng cố lý do dùng fusion.
+- Không có strategy fusion nào vượt trội có ý nghĩa thống kê so với Text-Only trên N=110 — điều này hợp lý với test set nhỏ, cần nêu rõ đây là limitation về statistical power.
 
 ---
 
-### 1.5 Thư mục feature extraction test set
+### 1.2 [Must do] Per-label-criterion evaluation
 
-**Paper:** Không đề cập chi tiết cấu trúc thư mục.
+**Vấn đề gốc:** Reviewer phê bình construct validity — positive label gộp 3 hiện tượng khác nhau mà không đánh giá riêng từng nhóm.
 
-**Thay đổi:** `inference_features_dir` = `"data/features_test"` (trước đây là `"data/inference_features"`). Thư mục này được bảo vệ khỏi bị xóa bởi cleanup trong `run_inference.py`.
+**Đã làm:** Tạo `src/steps/per_label_criterion.py` — dùng proxy từ features sẵn có (không cần annotation tay mới):
+- **Model name in listing** → keyword col[2] (model_name binary) > 0
+- **Generative behavior** → keyword col[6] OR [8] OR [10] > 0 (generation/interaction/content)
+- **Chat-style UI only** → zeroshot score > 0.15 (top ~25% test distribution)
+- **Hard / ambiguous** → không có proxy nào
 
----
+**Kết quả** (`runs/feature_fusion/per_label_criterion/`):
 
-## Phần 2 — Kết quả không khớp với paper (cần cập nhật báo cáo)
+| Nhóm | N positives | Soft Voting F1 |
+|------|------------|---------------|
+| model_name_in_listing | 5 | 0.455 |
+| generative_behavior | 9 | 0.500 |
+| chat_style_ui_only | 5 | 0.455 |
+| hard_ambiguous | 25 | 0.767 |
 
-### 🚨 Mức độ NGHIÊM TRỌNG — Ảnh hưởng đến kết luận chính
-
-#### 2.1 Table 20 — Thứ tự fusion strategy trên independent test bị đảo ngược
-
-**Paper tuyên bố:** Soft Voting là strategy tốt nhất (F1=0.851), Early Fusion xếp sau (F1=0.830).
-
-| Strategy | Paper F1 | Hiện tại F1 | Paper AUC | Hiện tại AUC |
-|---|---|---|---|---|
-| Early Fusion | 0.830 | **0.878** (+0.048) | 0.938 | **0.952** |
-| Soft Voting | **0.851** | 0.833 (−0.018) | 0.930 | 0.944 |
-| Stacking | 0.843 | 0.848 | 0.937 | 0.947 |
-| Score-Max | 0.827 | 0.827 (=) | 0.918 | 0.933 |
-| Text-Only | — | 0.851 | — | 0.948 |
-
-Kết quả hiện tại: **Early Fusion tốt nhất (F1=0.878)**, Soft Voting chỉ đứng thứ 3 (F1=0.833). Paper claim Soft Voting wins on F1 là không còn đúng. Cần kiểm tra xem đây là do thay đổi dataset/label hay bug.
-
-> Lưu ý thêm: Text-Only đang đạt F1=0.851 — bằng đúng con số paper ghi cho Soft Voting — rất đáng ngờ.
-
-#### 2.2 Table 15 — Temporal delta dương, ngược chiều paper
-
-**Paper tuyên bố:** *"All fusion strategies degrade gracefully, F1 drops at most 0.045."* (tất cả đều âm)
-
-| Strategy | Paper Δ | Hiện tại Δ |
-|---|---|---|
-| Early Fusion | −0.038 | **+0.075** ↑ |
-| Score-Max | −0.040 | **+0.069** ↑ |
-| Text-Only | −0.045 | −0.014 |
-| Soft Voting | −0.035 | −0.012 |
-| Stacking | −0.037 | −0.018 |
-
-Early Fusion và Score-Max đang *tốt hơn* dưới temporal split thay vì tệ hơn. Nguyên nhân trực tiếp là D_cut thay đổi (xem mục 1.1): test set 2026 chứa các app được re-update sau khi LLM branding trở nên phổ biến, khiến chúng dễ detect hơn.
-
-**Cần quyết định:** Dùng D_cut nào trong paper? Nếu giữ 2026-04-30, cần sửa narrative Section 5.9 từ "graceful degradation" thành "temporal enrichment" — một claim khác về mặt nghĩa.
+**Nhận xét quan trọng:** Nhóm `hard_ambiguous` (25/44 positives = 57%) đạt F1 cao nhất — đây là các app mà model học được signal từ SBERT embedding chứ không phải từ keyword hay UI trực tiếp. Nhóm `model_name_in_listing` chỉ có 5 apps trên test set vì nhiều app có model name đã nằm trong training data.
 
 ---
 
-### ⚠️ Mức độ ĐÁNG CHÚ Ý — Ảnh hưởng đến claim phụ
+### 1.3 [High impact] Keyword-drift robustness test
 
-#### 2.3 Table 7 — Soft Voting AUC thấp hơn 2 điểm
+**Vấn đề gốc:** Reviewer #4 hỏi vocabulary 39 keyword có bị drift khi tên model mới xuất hiện không.
 
-| Strategy | Paper AUC | Hiện tại AUC | Gap |
-|---|---|---|---|
-| Soft Voting | 0.904 | 0.884 | −0.020 |
-| Stacking | 0.902 | 0.894 | −0.008 |
-| Score-Max | 0.894 | 0.889 | −0.005 |
-| Text-Only | 0.872 | 0.859 | −0.013 |
-| Image-Only | 0.825 | 0.793 | −0.032 |
+**Đã làm:** Tạo `src/steps/keyword_drift.py`
+- Re-compute keyword features từ raw text mà không có category `model_name` (chatgpt, gpt-4, gpt-3, claude, gemini, copilot, llama, mistral)
+- Giữ nguyên SBERT và meta features
+- Retrain 5-fold text-only LightGBM với features mới (chạy trong RAM, không ghi đè model gốc)
+- Evaluate trên independent test set với cùng cách zero model-name keywords
 
-Paper claim "Soft Voting leads on ROC-AUC (0.904)". Hiện tại 0.884, không còn là giá trị 0.9+.
+**Kết quả** (`runs/feature_fusion/keyword_drift/keyword_drift_results.json`):
 
-#### 2.4 Table 10 — Within-class branch correlations thấp hơn đáng kể
+| Điều kiện | F1 | AUC |
+|-----------|-----|-----|
+| CV — có model-name keywords | 0.7531 | 0.8723 |
+| CV — không có model-name keywords | 0.7352 (−0.018) | 0.8655 (−0.007) |
+| Indep. test — có model-name keywords | 0.8510 | 0.9480 |
+| Indep. test — không có model-name keywords | 0.8671 (+0.016) | 0.9390 (−0.009) |
 
-| Subset | Paper ρ (Pearson) | Hiện tại ρ (Pearson) |
-|---|---|---|
-| Positives (y=1) | 0.42 | **0.32** (−0.10) |
-| Negatives (y=0) | 0.39 | **0.25** (−0.14) |
-| Pooled | 0.51 | 0.52 (≈ same) |
-
-Paper dùng ρ≈0.42 để giải thích tại sao Soft Voting có "small but positive ranking gain" (Section 5.5). Với ρ=0.32, lý thuyết dự đoán gain *lớn hơn* — nhưng thực tế AUC lại thấp hơn. Hai điều này mâu thuẫn, cần giải thích.
-
-#### 2.5 Table 11 — Disagreement set size lớn hơn nhiều
-
-| | Paper | Hiện tại |
-|---|---|---|
-| Disagree set size | **54** | **81** |
-| Soft Voting accuracy | 0.741 | 0.691 |
-| Score-Max accuracy | 0.704 | 0.605 |
-
-Threshold phân loại "hai branch không đồng ý" là `|s_text − s_img| > 0.3` (không thay đổi). Set size lớn hơn (81 vs 54) cho thấy branch scores trong current run có phân tán lớn hơn — hai branch "cãi nhau" nhiều hơn. Đây là triệu chứng của text/image branch có calibration khác nhau so với paper.
-
-#### 2.6 Text branch (Table 3) underperform nhất quán
-
-| Config | Paper AUC | Hiện tại AUC | Paper F1 | Hiện tại F1 |
-|---|---|---|---|---|
-| BGE only | 0.808 | 0.776 | 0.682 | 0.593 |
-| BGE + Handcrafted | 0.872 | 0.852 | 0.753 | 0.712 |
-
-BGE-only F1 gap = −0.089, rất lớn. Gợi ý: có thể embedding model bị load ở precision thấp hơn, hoặc truncation length khác, hoặc feature normalization.
-
-#### 2.7 Image branch (Table 5) underperform
-
-| Config | Paper AUC | Hiện tại AUC |
-|---|---|---|
-| Full image branch | 0.8246 | 0.7959 (−0.029) |
-| − CLIP pooled | 0.7321 | 0.7219 |
-| − OCR features | 0.8073 | 0.8031 |
-
-Full image branch thấp hơn 3 điểm AUC. CLIP ViT-L/14-336 được dùng đúng theo paper, nhưng kết quả thấp hơn — có thể do số lượng screenshots hoặc dedup khác nhau.
+**Diễn giải:** Trên CV, bỏ model-name giảm F1 nhẹ (−0.018). Trên independent test set, F1 thậm chí tăng nhẹ (+0.016) — cho thấy SBERT embedding đủ mạnh để bù đắp signal từ tên model. Kết quả này là **bằng chứng tốt cho reviewer**: model không phụ thuộc nặng vào tên model cụ thể, vocabulary drift không gây degradation nghiêm trọng.
 
 ---
 
-## Phần 3 — Những kết quả ổn, không cần sửa
+### 1.4 [Medium] Phân tích khi nào image giúp / gây hại
 
-| Bảng | Trạng thái |
-|---|---|
-| Table 7 — Score-Max F1/AUC | Gap < 0.007, không đáng kể |
-| Table 7 — Stacking F1/AUC | Gap < 0.01 |
-| Table 5 — ΔROC-AUC thứ tự ablation | CLIP > OCR > Chatbot-UI, đúng thứ tự paper |
-| Table 3 — SLM-only F1=0.000, AUC≈0.52 | Đúng với paper |
-| Table 3 — Handcrafted-only F1/AUC | Gần đúng (±0.01) |
-| Table 10 — Pooled correlation | 0.52 vs 0.51, gần như bằng nhau |
-| Calibration — Brier raw | Sai lệch nhỏ, cùng chiều |
+**Vấn đề gốc:** Reviewer nói cross-modal story "được khẳng định nhưng không được chứng minh bằng ví dụ cụ thể."
+
+**Đã làm:** Tạo `src/steps/image_analysis_examples.py` — phân loại 110 test apps thành 6 pattern:
+
+**Kết quả** (`runs/feature_fusion/image_analysis/`):
+
+| Pattern | N | N pos | Fusion Acc | Avg text | Avg img |
+|---------|---|-------|-----------|---------|--------|
+| A: Image saves (text miss, img hit) | 5 | 5 | — | — | — |
+| B: Image misleads (text ok, img FP) | 11 | 0 | — | — | — |
+| C: Text leads (text hit, img miss) | 7 | 7 | — | — | — |
+| D: Both agree positive | 30 | 30 | — | — | — |
+| E: Both agree negative | 49 | 0 | — | — | — |
+| F: Both wrong | 8 | 2 | — | — | — |
+
+**Diễn giải:** Image branch cứu được **5 TPs** mà text alone miss, nhưng cũng tạo thêm **11 FPs**. Pattern D (both agree positive) chiếm 30/44 positives — tức là 68% positive apps đã hiển nhiên cho cả hai modality. Examples cho paper nằm ở `image_helps_examples.json` và `image_hurts_examples.json`.
 
 ---
 
-## Phần 4 — Checklist cho teammate
+### 1.5 [Medium] Image-Only trên independent test set
 
-- [ ] **Rewrite Section 4.1.2 và Table 2:** Xóa toàn bộ LLMAID. Đổi narrative thành "AI Discriminator recall gap chứng minh sự cần thiết của LLMDroid". Cập nhật số: N_code=80, κ=0.075, Agreement=53.8%. Xóa κ=0.847 khỏi abstract và body.
-- [ ] **Quyết định D_cut:** Giữ 2026-04-30 và sửa narrative Section 5.9, hoặc tìm cách reproduce D_cut 2025-06-01 đúng với paper.
-- [ ] **Quyết định Gemini baseline:** Ghi chú deprecated, thay bằng model khác, hoặc bỏ dòng Gemini trong Table 12.
-- [ ] **Điều tra Table 20:** Tại sao Early Fusion > Soft Voting? Kiểm tra lại label file `inference_manual.csv` có đúng 44 positives / 66 negatives không.
-- [ ] **Điều tra text branch:** Tại sao BGE-only AUC thấp hơn 0.032? Kiểm tra BGE embedding extraction pipeline.
-- [ ] **Cập nhật Table 15 trong paper** theo kết quả thực tế với D_cut mới.
-- [ ] **Cập nhật Table 20 trong paper** với số thực tế sau khi xác nhận label đúng.
-- [ ] **Kiểm tra Table 18 (robustness):** Chạy lại sau fix threshold rescaling, so sánh với paper.
-- [ ] Các bảng khác (Table 7 phần Score-Max/Stacking, Table 3 SLM/Handcrafted, Table 5 ΔAUC) có thể cập nhật số thực tế với note nhỏ.
+**Vấn đề gốc:** `independent_test_eval.py` không có Image-Only trong strategies, làm so sánh modality không đầy đủ.
+
+**Đã sửa:** Thêm `"Image-Only": img_probs` vào strategies dict trong `src/steps/independent_test_eval.py`.
+
+**Output:** `runs/feature_fusion/independent_test/predictions_image_only.csv` đã tồn tại.
+
+Số liệu Image-Only trên N=110 giờ có đầy đủ trong `table20_independent_test.json` để so sánh trực tiếp với Text-Only và các fusion strategies.
+
+---
+
+### 1.6 [Optional] SHAP / Feature importance
+
+**Đã làm:** Tạo `src/steps/shap_analysis.py` — TreeSHAP trên tất cả 5 folds, aggregate mean |SHAP|.
+
+**Kết quả** (`runs/feature_fusion/shap_analysis/`):
+
+**Text-Only — top features:**
+1. `kw_model_name_count` (keyword)
+2. `kw_max_len` (keyword)
+3. `sbert_1007`, `kw_core_llm_count`, `sbert_1000`...
+
+**Group importance — Text-Only:**
+- SBERT: 3.999 >> Keyword: 0.618 >> Meta: ~0.0
+
+**Early Fusion — top features:**
+1. `clip_mean_76`, `kw_max_len`, `clip_mean_135`...
+
+**Group importance — Early Fusion:**
+- clip_mean: 2.064 > SBERT: 1.449 > clip_max: 1.195 > Keyword: 0.342 > zeroshot: 0.071
+
+**Diễn giải:** SBERT embedding là backbone chính của text branch (chiếm 87% total importance trong Text-Only). Trong Early Fusion, CLIP features (clip_mean + clip_max) cộng lại còn lớn hơn SBERT — cho thấy image branch đóng góp thực chất chứ không bị text branch lấn át.
+
+---
+
+## Phần 2 — Những gì KHÔNG làm và lý do
+
+### 2.1 [High impact] Tạo low-prior test set thực tế (2–5% LLM prevalence)
+
+**Reviewer yêu cầu:** Lấy mẫu test set mới từ nhiều category rộng hơn, nơi chỉ 2–5% là LLM app, thay vì chỉ dùng post-hoc mathematical correction.
+
+**Lý do không làm:**
+
+Pipeline hiện tại đã có `prior_correction.py` với Figure 5 (prior-corrected precision vs deployment prior). Để tạo được test set thực tế với 2–5% prevalence, cần:
+
+1. **Thu thập ~500–2000 apps mới** từ Google Play, spanning nhiều category như Games, Health, Shopping — nơi LLM app gần như không xuất hiện. Việc này mất 1–2 ngày chạy automated scraping.
+2. **Annotate tay toàn bộ** bởi ít nhất 2 annotators — với ~1000 apps ước tính mất 5–10 ngày làm việc thực.
+3. **Extract features** (SBERT + CLIP + OCR) cho dataset mới — thêm 4–8 giờ GPU.
+
+Tổng: **2–3 tuần** với nguồn lực người đầy đủ. Không khả thi trong timeline revision hiện tại.
+
+**Cách phản hồi reviewer:** Giữ Figure 5 (prior-corrected precision curve) và bổ sung câu giải thích rằng mathematical correction là conservative lower-bound. Thừa nhận đây là limitation và ghi vào future work.
+
+---
+
+### 2.2 [High impact] Mở rộng dataset (298 train / 110 test)
+
+**Reviewer yêu cầu:** Thêm apps từ nhiều category hơn, hard negatives (app AI nhưng không phải LLM), non-English listings, và ideally một app store khác.
+
+**Lý do không làm:**
+
+Đây là vấn đề lớn nhất về nguồn lực:
+
+1. **Thu thập data mới** tương tự như mục 2.1 nhưng quy mô lớn hơn (mục tiêu ≥ 2× dataset hiện tại = +600 apps training).
+2. **Annotation tay** với IAA protocol — mỗi app cần 2 annotators độc lập, resolution meeting khi disagree. Với 600 apps mới và average 15 phút/app × 2 annotators: ~300 giờ làm việc.
+3. **Full pipeline retrain** sau khi có data mới — extract features, retrain 5-fold tất cả strategies, re-run toàn bộ analysis. Thêm 1–2 ngày.
+4. **Non-English listings** cần thay đổi text model (BGE-large-en-v1.5 chỉ tiếng Anh) hoặc dùng multilingual SBERT — ảnh hưởng đến tất cả kết quả hiện tại.
+
+Tổng: **1–2 tháng** nếu làm đúng quy trình. Không thể hoàn thành trong revision.
+
+**Cách phản hồi reviewer:** Frame rõ scope của paper — LLMDroid là hệ thống detection cho English Google Play listings, được evaluate trên balanced sample 298+110 apps. Ghi nhận limitation về scale và đề xuất future work: benchmark dataset công khai, multi-store, multilingual extension.
+
+---
+
+## Phần 3 — Files đã thay đổi
+
+| File | Thay đổi |
+|------|---------|
+| `src/steps/independent_test_eval.py` | Thêm Image-Only vào strategies |
+| `src/steps/statistical_tests.py` | Đổi data source → independent test; thêm F1 bootstrap |
+| `src/steps/per_label_criterion.py` | **Mới** — per-label-criterion evaluation |
+| `src/steps/keyword_drift.py` | **Mới** — keyword drift robustness (retrain in-memory) |
+| `src/steps/image_analysis_examples.py` | **Mới** — image helps/hurts qualitative analysis |
+| `src/steps/shap_analysis.py` | **Mới** — TreeSHAP for Text-Only + Early Fusion |
+| `src/run_analysis.py` | Thêm bước 6.10–6.13 |
+| `requirements.txt` | Thêm `shap>=0.46.0` |

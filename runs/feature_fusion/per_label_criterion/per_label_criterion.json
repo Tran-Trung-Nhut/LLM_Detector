@@ -1,0 +1,82 @@
+{
+  "model_name_in_listing": {
+    "Text-Only": {
+      "n": 71,
+      "n_pos": 5,
+      "precision": 0.455,
+      "recall": 1.0,
+      "f1": 0.625,
+      "accuracy": 0.915,
+      "n_pos_group": 5
+    },
+    "Soft Voting": {
+      "n": 71,
+      "n_pos": 5,
+      "precision": 0.294,
+      "recall": 1.0,
+      "f1": 0.455,
+      "accuracy": 0.831,
+      "n_pos_group": 5
+    }
+  },
+  "generative_behavior": {
+    "Text-Only": {
+      "n": 75,
+      "n_pos": 9,
+      "precision": 0.538,
+      "recall": 0.778,
+      "f1": 0.636,
+      "accuracy": 0.893,
+      "n_pos_group": 9
+    },
+    "Soft Voting": {
+      "n": 75,
+      "n_pos": 9,
+      "precision": 0.368,
+      "recall": 0.778,
+      "f1": 0.5,
+      "accuracy": 0.813,
+      "n_pos_group": 9
+    }
+  },
+  "chat_style_ui_only": {
+    "Text-Only": {
+      "n": 71,
+      "n_pos": 5,
+      "precision": 0.455,
+      "recall": 1.0,
+      "f1": 0.625,
+      "accuracy": 0.915,
+      "n_pos_group": 5
+    },
+    "Soft Voting": {
+      "n": 71,
+      "n_pos": 5,
+      "precision": 0.294,
+      "recall": 1.0,
+      "f1": 0.455,
+      "accuracy": 0.831,
+      "n_pos_group": 5
+    }
+  },
+  "hard_ambiguous": {
+    "Text-Only": {
+      "n": 91,
+      "n_pos": 25,
+      "precision": 0.769,
+      "recall": 0.8,
+      "f1": 0.784,
+      "accuracy": 0.879,
+      "n_pos_group": 25
+    },
+    "Soft Voting": {
+      "n": 91,
+      "n_pos": 25,
+      "precision": 0.657,
+      "recall": 0.92,
+      "f1": 0.767,
+      "accuracy": 0.846,
+      "n_pos_group": 25
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "model_name_in_listing": {
+    "n_pos": 5,
+    "app_ids": [
+      "com.delgeo.desygner",
+      "com.handcent.app.nextsms",
+      "com.microsoft.bing",
+      "com.redraw.keyboard",
+      "quick.read.app"
+    ]
+  },
+  "generative_behavior": {
+    "n_pos": 9,
+    "app_ids": [
+      "com.bpmobile.iscanner.free",
+      "com.mailchimp.mailchimp",
+      "ai.rocky.app",
+      "app.awarefy.awarefyapp",
+      "com.adobe.reader",
+      "com.surrealwork.mementomori",
+      "com.testa.databot",
+      "com.tuya.smartlife",
+      "messenger.x.chat.bot.messenger.release"
+    ]
+  },
+  "chat_style_ui_only": {
+    "n_pos": 5,
+    "app_ids": [
+      "ai.praktika.android",
+      "co.vulcanlabs.pictranslator",
+      "com.smartremote.homepodsiri",
+      "com.xvideostudio.videodownload",
+      "in.softecks.artificialintelligence"
+    ]
+  },
+  "hard_ambiguous": {
+    "n_pos": 25,
+    "app_ids": [
+      "com.adobe.spark.post",
+      "com.getjobber.jobber",
+      "com.gemtechnologies.gem4me",
+      "ai.boyfriend.virtual.dating.lover.iboy",
+      "com.baek.Gatalk_market",
+      "com.coursehero.coursehero",
+      "com.ejoy.epic",
+      "com.innovate.BlackPeopleMingle",
+      "com.innovate.ChinaSocial",
+      "com.innovate.MalaysianSocial",
+      "com.innovate.SaudiArabiaCupid",
+      "com.innovate.SingaporeSocial",
+      "com.innovate.ThaiSocial",
+      "com.kindermate.kai",
+      "com.mailtime.android",
+      "com.mingle.AussieSocial",
+      "com.mingle.DutchCupid",
+      "com.mingle.EuropianMingle",
+      "com.mingle.PolishCupid",
+      "com.mingle.SwissCupid",
+      "com.mingle.VenezuelaCupid",
+      "com.tag_hive.saathi.saathi",
+      "com.wellocution.androidapp",
+      "help.simplicity.simplicity",
+      "insights.investments.app"
+    ]
+  }
+}

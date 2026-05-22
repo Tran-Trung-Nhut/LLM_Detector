@@ -1,0 +1,57 @@
+[
+  {
+    "app_id": "com.innovate.BlackPeopleMingle",
+    "y_true": 1,
+    "y_prob": 0.627453,
+    "text_prob": 0.358592,
+    "image_prob": 0.918718,
+    "title": "Black Dating: Chat, Meet, Date",
+    "category": "Social",
+    "short_description": "Dating App To Meet Black Singles. Match, Chat, Date & Build Connections.",
+    "description_snippet": "Black Dating is a dating app made for Black singles who want genuine connections, meaningful chats, and the chance to build something real. Whether you are looking to date locally, meet someone new, or simply enjoy good conversations, Black Dating gives you the space to connect at your own pace.\r\n\r\n"
+  },
+  {
+    "app_id": "com.innovate.SingaporeSocial",
+    "y_true": 1,
+    "y_prob": 0.629314,
+    "text_prob": 0.398092,
+    "image_prob": 0.879805,
+    "title": "Singapore Dating: Meet & Chat",
+    "category": "Lifestyle",
+    "short_description": "Date Singaporean Singles Nearby. Chat, Meet People, Connect With Locals Online.",
+    "description_snippet": "❤️ Looking to meet someone new in Singapore? Whether you're local or an expat settling in, Singapore Dating helps you discover people nearby and start conversations that matter.\r\n\r\nOur goal is to offer a welcoming space where singles can connect through messages and mutual interests. There’s no pres"
+  },
+  {
+    "app_id": "com.mingle.AussieSocial",
+    "y_true": 1,
+    "y_prob": 0.687737,
+    "text_prob": 0.494579,
+    "image_prob": 0.896992,
+    "title": "Australia Dating – Meet Locals",
+    "category": "Lifestyle",
+    "short_description": "Dating App For Americans In Australia. Meet Locals, Expats, Or Travelers Nearby.",
+    "description_snippet": "💬 Meet Singles In Australia — Whether You’re Living, Working, Or Traveling Abroad.\r\n\r\nMoving or traveling to Australia and looking to meet new people? Whether you’re in Sydney, Melbourne, Brisbane, or Perth, Australia Dating helps you connect with friendly locals, fellow expats, and travelers who sh"
+  },
+  {
+    "app_id": "com.adobe.spark.post",
+    "y_true": 1,
+    "y_prob": 0.478233,
+    "text_prob": 0.332211,
+    "image_prob": 0.636424,
+    "title": "Adobe Express: AI Photo, Video",
+    "category": "Art & Design",
+    "short_description": "Effortlessly edit your videos. Ideal for both professional and personal projects",
+    "description_snippet": "Adobe Express is the quick and easy app to create on-brand content that helps your business stand out and make an impact. Whether you're a beginner or a seasoned creator, Adobe Express empowers you and your team to make high-quality marketing and business materials while maintaining brand consistenc"
+  },
+  {
+    "app_id": "com.bpmobile.iscanner.free",
+    "y_true": 1,
+    "y_prob": 0.452911,
+    "text_prob": 0.3434,
+    "image_prob": 0.571548,
+    "title": "iScanner - PDF Scanner App",
+    "category": "Productivity",
+    "short_description": "Turn your phone into a mobile document scanner with OCR text recognition!",
+    "description_snippet": "Meet iScanner, the top-rated PDF scanner trusted by over 125 million users. \r\n\r\nWith our powerful document scanner, built on 10+ years of experience, you can scan anything from receipts and ID cards to contracts, assignments, or photos. Simply scan your document, have its edges automatically adjuste"
+  }
+]

@@ -1,0 +1,195 @@
+{
+  "top_30_features": [
+    {
+      "rank": 1,
+      "feature_name": "kw_model_name_count",
+      "original_idx": 1027,
+      "mean_abs_shap": 0.243058
+    },
+    {
+      "rank": 2,
+      "feature_name": "kw_max_len",
+      "original_idx": 1036,
+      "mean_abs_shap": 0.180729
+    },
+    {
+      "rank": 3,
+      "feature_name": "sbert_1007",
+      "original_idx": 1007,
+      "mean_abs_shap": 0.174032
+    },
+    {
+      "rank": 4,
+      "feature_name": "kw_core_llm_count",
+      "original_idx": 1029,
+      "mean_abs_shap": 0.164278
+    },
+    {
+      "rank": 5,
+      "feature_name": "sbert_1000",
+      "original_idx": 1000,
+      "mean_abs_shap": 0.107841
+    },
+    {
+      "rank": 6,
+      "feature_name": "sbert_316",
+      "original_idx": 316,
+      "mean_abs_shap": 0.076696
+    },
+    {
+      "rank": 7,
+      "feature_name": "sbert_28",
+      "original_idx": 28,
+      "mean_abs_shap": 0.07147
+    },
+    {
+      "rank": 8,
+      "feature_name": "sbert_790",
+      "original_idx": 790,
+      "mean_abs_shap": 0.066439
+    },
+    {
+      "rank": 9,
+      "feature_name": "sbert_448",
+      "original_idx": 448,
+      "mean_abs_shap": 0.062072
+    },
+    {
+      "rank": 10,
+      "feature_name": "sbert_298",
+      "original_idx": 298,
+      "mean_abs_shap": 0.057633
+    },
+    {
+      "rank": 11,
+      "feature_name": "sbert_443",
+      "original_idx": 443,
+      "mean_abs_shap": 0.056091
+    },
+    {
+      "rank": 12,
+      "feature_name": "sbert_115",
+      "original_idx": 115,
+      "mean_abs_shap": 0.052467
+    },
+    {
+      "rank": 13,
+      "feature_name": "sbert_182",
+      "original_idx": 182,
+      "mean_abs_shap": 0.052046
+    },
+    {
+      "rank": 14,
+      "feature_name": "sbert_968",
+      "original_idx": 968,
+      "mean_abs_shap": 0.051428
+    },
+    {
+      "rank": 15,
+      "feature_name": "sbert_744",
+      "original_idx": 744,
+      "mean_abs_shap": 0.050075
+    },
+    {
+      "rank": 16,
+      "feature_name": "sbert_701",
+      "original_idx": 701,
+      "mean_abs_shap": 0.0497
+    },
+    {
+      "rank": 17,
+      "feature_name": "sbert_829",
+      "original_idx": 829,
+      "mean_abs_shap": 0.047203
+    },
+    {
+      "rank": 18,
+      "feature_name": "sbert_907",
+      "original_idx": 907,
+      "mean_abs_shap": 0.046498
+    },
+    {
+      "rank": 19,
+      "feature_name": "sbert_595",
+      "original_idx": 595,
+      "mean_abs_shap": 0.046258
+    },
+    {
+      "rank": 20,
+      "feature_name": "sbert_98",
+      "original_idx": 98,
+      "mean_abs_shap": 0.046227
+    },
+    {
+      "rank": 21,
+      "feature_name": "sbert_209",
+      "original_idx": 209,
+      "mean_abs_shap": 0.044818
+    },
+    {
+      "rank": 22,
+      "feature_name": "sbert_1014",
+      "original_idx": 1014,
+      "mean_abs_shap": 0.044744
+    },
+    {
+      "rank": 23,
+      "feature_name": "sbert_945",
+      "original_idx": 945,
+      "mean_abs_shap": 0.043053
+    },
+    {
+      "rank": 24,
+      "feature_name": "sbert_601",
+      "original_idx": 601,
+      "mean_abs_shap": 0.042374
+    },
+    {
+      "rank": 25,
+      "feature_name": "sbert_817",
+      "original_idx": 817,
+      "mean_abs_shap": 0.041496
+    },
+    {
+      "rank": 26,
+      "feature_name": "sbert_223",
+      "original_idx": 223,
+      "mean_abs_shap": 0.041397
+    },
+    {
+      "rank": 27,
+      "feature_name": "sbert_65",
+      "original_idx": 65,
+      "mean_abs_shap": 0.040342
+    },
+    {
+      "rank": 28,
+      "feature_name": "sbert_432",
+      "original_idx": 432,
+      "mean_abs_shap": 0.040026
+    },
+    {
+      "rank": 29,
+      "feature_name": "sbert_814",
+      "original_idx": 814,
+      "mean_abs_shap": 0.038146
+    },
+    {
+      "rank": 30,
+      "feature_name": "sbert_201",
+      "original_idx": 201,
+      "mean_abs_shap": 0.03796
+    }
+  ],
+  "group_importance": {
+    "sbert": 3.999828,
+    "keyword": 0.618041,
+    "meta": 0.0,
+    "clip_mean": 0.0,
+    "clip_max": 0.0,
+    "zeroshot": 0.0,
+    "ocr": 0.0
+  },
+  "n_folds_aggregated": 5,
+  "n_samples_total": 298
+}

@@ -1,0 +1,44 @@
+{
+  "A_image_saves": {
+    "n": 5,
+    "n_pos": 5,
+    "fusion_accuracy": 0.6,
+    "avg_text_prob": 0.385,
+    "avg_image_prob": 0.781
+  },
+  "B_image_misleads": {
+    "n": 11,
+    "n_pos": 0,
+    "fusion_accuracy": 0.364,
+    "avg_text_prob": 0.297,
+    "avg_image_prob": 0.726
+  },
+  "C_text_leads": {
+    "n": 7,
+    "n_pos": 7,
+    "fusion_accuracy": 1.0,
+    "avg_text_prob": 0.847,
+    "avg_image_prob": 0.316
+  },
+  "D_both_agree_pos": {
+    "n": 30,
+    "n_pos": 30,
+    "fusion_accuracy": 1.0,
+    "avg_text_prob": 0.809,
+    "avg_image_prob": 0.741
+  },
+  "E_both_agree_neg": {
+    "n": 49,
+    "n_pos": 0,
+    "fusion_accuracy": 1.0,
+    "avg_text_prob": 0.169,
+    "avg_image_prob": 0.2
+  },
+  "F_both_wrong": {
+    "n": 8,
+    "n_pos": 2,
+    "fusion_accuracy": 0.125,
+    "avg_text_prob": 0.62,
+    "avg_image_prob": 0.55
+  }
+}

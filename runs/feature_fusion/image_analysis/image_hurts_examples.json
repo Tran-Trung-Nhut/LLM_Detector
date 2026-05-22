@@ -1,0 +1,57 @@
+[
+  {
+    "app_id": "com.mobisystems.editor.office_with_reg",
+    "y_true": 0,
+    "y_prob": 0.443125,
+    "text_prob": 0.106718,
+    "image_prob": 0.807565,
+    "title": "OfficeSuite Pro + PDF (Trial)",
+    "category": "Business",
+    "short_description": "ANDROID'S TOP MOBILE OFFICE - Word, Excel, PowerPoint and PDF at your fingertips",
+    "description_snippet": "This is the full-feature PRO version of the award-winning OfficeSuite application that lets you easily view, edit, and create Word, Excel, and PowerPoint documents, convert to PDF, and manage your files.\r\n\r\n • The most downloaded office app on Google Play\r\n • Delivers the most exclusive features ove"
+  },
+  {
+    "app_id": "com.tm.mms.TeleMessageClientApp",
+    "y_true": 0,
+    "y_prob": 0.553799,
+    "text_prob": 0.25847,
+    "image_prob": 0.873738,
+    "title": "Capture Mobile",
+    "category": "Business",
+    "short_description": "Capture Mobile Messenger",
+    "description_snippet": "The Capture Mobile is a Secure Messaging Android App which offers compliance, branding and employee autonomy. The App serves both as a secure business messaging app built for organizations with security and privacy in mind and as a separate enterprise and personal messaging App on a single enterpris"
+  },
+  {
+    "app_id": "com.airgms.mobile",
+    "y_true": 0,
+    "y_prob": 0.360698,
+    "text_prob": 0.101069,
+    "image_prob": 0.641962,
+    "title": "iGMS",
+    "category": "Business",
+    "short_description": "Vacation Rental App for Airbnb Hosts on the Go",
+    "description_snippet": "The #1-Rated Vacation Rental App for Airbnb Hosts on the Go.\r\n\r\nWith over 50,000 downloads and a 4.8-star rating, iGMS is the most downloaded and top-rated vacation rental software in the industry—Airbnb Preferred+, Booking.com Advanced, and Premier VRBO Partner.\r\n\r\nJoin thousands of short-term rent"
+  },
+  {
+    "app_id": "com.lt.ieltspracticetest",
+    "y_true": 0,
+    "y_prob": 0.595542,
+    "text_prob": 0.361961,
+    "image_prob": 0.848589,
+    "title": "IELTS Practice Band 9",
+    "category": "Education",
+    "short_description": "Boost your skills and confidence for the IELTS exam at home!",
+    "description_snippet": "Achieve Your Dream Score with IELTS Practice Band 9!\r\n\r\nWhether you are aiming for a 6.5 or striving for a perfect Band 9, IELTS Practice Band 9 is your ultimate all-in-one preparation companion. \r\n\r\nKey Features:\r\n\r\n- Practice Test Library: Access an extensive collection of full-length, highly auth"
+  },
+  {
+    "app_id": "com.wantedly.android.namecard_scanner",
+    "y_true": 0,
+    "y_prob": 0.473513,
+    "text_prob": 0.251918,
+    "image_prob": 0.713575,
+    "title": "Wantedly People scan biz cards",
+    "category": "Business",
+    "short_description": "Scan up to 10 business cards in a flash. Organize cards \ninto contacts with AI.",
+    "description_snippet": "Even with 100 cards, you'd only need 5 minutes, because this speedy app scans 10 at a time. Scatter out your cards, tap a button, and watch them transform into digital contacts. \r\nSpend less time organizing and start a conversation right away.\r\n\r\n----------\r\n\r\nHow you can organize your network and a"
+  }
+]
