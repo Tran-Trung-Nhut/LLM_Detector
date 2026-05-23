@@ -7,6 +7,7 @@
   "fusion_s_per_app": 0.0,
   "total_s_per_app": 0.6373,
   "baseline_latencies": {
+    "TF-IDF + linear SVM": 0.000542,
     "Qwen2.5-7B (desc. only)": 2.1414,
     "GPT-4o-mini (zero-shot)": 1.8912,
     "GPT-4o (6-shot)": 4.2034,

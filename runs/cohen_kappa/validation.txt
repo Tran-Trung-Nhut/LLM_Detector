@@ -1,3 +1,10 @@
 n_apps=80
 ai_discriminator_kappa=0.075
 ai_discriminator_pct_agreement=53.8
+[Independent test (N=110)]
+tp=12 fn=32 tn=59 fp=7
+f1=0.381
+kappa=0.184
+agreement=64.5%
+ef_f1=0.878
+n_identical=110

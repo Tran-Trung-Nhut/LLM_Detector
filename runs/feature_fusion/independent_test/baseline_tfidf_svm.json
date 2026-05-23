@@ -1,0 +1,24 @@
+{
+  "metrics": {
+    "threshold": 0.5,
+    "accuracy": 0.8727272727272727,
+    "precision_pos": 0.8,
+    "recall_pos": 0.9090909090909091,
+    "f1_pos": 0.851063829787234,
+    "macro_f1": 0.8699763593380614,
+    "pr_auc": 0.8961585124528957,
+    "roc_auc": 0.9325068870523416,
+    "confusion_matrix": [
+      [
+        56,
+        10
+      ],
+      [
+        4,
+        40
+      ]
+    ]
+  },
+  "latency_s_per_app": 0.000542,
+  "protocol": "train on 298 apps, test on 110 apps"
+}
