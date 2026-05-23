@@ -97,13 +97,15 @@ def _run_ai_disc_pipeline(api_key: str, apps: list, out_csv: str, checkpoint_pat
 
     done = json.loads(checkpoint_path.read_text()) if checkpoint_path.exists() else {}
     results = []
+    n = len(apps)
 
-    for app in apps:
+    for i, app in enumerate(apps, 1):
         pkg   = app["pkg"]
         label = app["listing_label"]
 
         if pkg in done:
             results.append(done[pkg])
+            print(f"[{i}/{n}] {pkg}  skip")
             continue
 
         row = {"pkg_name": pkg, "listing_label": label, "ai_discriminator_label": -1}
@@ -112,22 +114,26 @@ def _run_ai_disc_pipeline(api_key: str, apps: list, out_csv: str, checkpoint_pat
         if not sha256:
             row["note"] = "not_in_androzoo"
             done[pkg] = row; checkpoint_path.write_text(json.dumps(done, indent=2)); results.append(row)
+            print(f"[{i}/{n}] {pkg}  not_in_androzoo")
             continue
 
         apk_path = APK_DIR / f"{pkg}.apk"
         if not apk_path.exists() and not download_apk(api_key, sha256, apk_path):
             row["note"] = "download_failed"
             done[pkg] = row; checkpoint_path.write_text(json.dumps(done, indent=2)); results.append(row)
+            print(f"[{i}/{n}] {pkg}  download_failed")
             continue
 
         dec_dir = DECOMPILE_DIR / pkg
         if not decompile(apk_path, dec_dir):
             row["note"] = "decompile_failed"
             done[pkg] = row; checkpoint_path.write_text(json.dumps(done, indent=2)); results.append(row)
+            print(f"[{i}/{n}] {pkg}  decompile_failed")
             continue
 
         row["ai_discriminator_label"] = run_ai_discriminator(dec_dir)
         done[pkg] = row; checkpoint_path.write_text(json.dumps(done, indent=2)); results.append(row)
+        print(f"[{i}/{n}] {pkg}  -> {row['ai_discriminator_label']}")
 
     valid = [r for r in results if r.get("ai_discriminator_label", -1) != -1]
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
