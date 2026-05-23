@@ -110,7 +110,7 @@ python src/run_analysis.py
 ### 4 — Baselines
 
 ```bash
-# Local models only (Qwen2.5-7B + E2E transformer)
+# All local baselines (TF-IDF+SVM + Qwen2.5-7B + E2E transformer)
 python src/run_baselines.py
 
 # Include API baselines (GPT-4o-mini zero-shot + GPT-4o 6-shot)
@@ -118,7 +118,15 @@ export OPENAI_API_KEY=sk-...
 python src/run_baselines.py --all
 ```
 
-Flags: `--skip-qwen`, `--skip-e2e`, `--skip-local`, `--no-latency`.
+Flags: `--skip-tfidf-svm`, `--skip-qwen`, `--skip-e2e`, `--skip-local`, `--no-latency`.
+
+| Baseline | Type | Output |
+|----------|------|--------|
+| TF-IDF + linear SVM | description-only, 1–2 grams, max 20k features, L2 LinearSVC | `baseline_tfidf_svm.json` |
+| Qwen2.5-7B | description-only, zero-shot | `baseline_qwen.json` |
+| E2E transformer | BGE + CLIP, fine-tuned, 5-fold | `baseline_e2e_transformer.json` |
+| GPT-4o-mini | multimodal, zero-shot (`--all`) | `baseline_mllm_zeroshot_*.json` |
+| GPT-4o | multimodal, 6-shot (`--all`) | `baseline_mllm_fewshot_*.json` |
 
 ### 5 — Inference on new apps
 
@@ -146,7 +154,9 @@ python src/run_iaa.py
 # → runs/cohen_kappa/iaa.txt
 ```
 
-### Code-level validation
+### Code-level validation (Table 2)
+
+Runs AI Discriminator on decompiled APKs and compares against listing labels and LLMDroid Early Fusion predictions.
 
 ```bash
 # One-time: download Androzoo metadata (~3 GB)
@@ -154,10 +164,20 @@ wget https://androzoo.uni.lu/static/lists/latest.csv.gz
 gunzip latest.csv.gz && mv latest.csv data/androzoo_latest.csv
 
 export ANDROZOO_API_KEY=your_key
-python src/run_code_validation.py
-# → runs/cohen_kappa/validation.txt
-# Checkpoint auto-saved — safe to interrupt and resume
+
+# Phase 1: code-validation set (N=80)
+python src/run_code_validation.py --phases 1
+
+# Phase 2: independent test set (N=110) + F1 comparison vs LLMDroid Early Fusion
+python src/run_code_validation.py --phases 2
+
+# Both phases
+python src/run_code_validation.py --phases 1 2
 ```
+
+Phase 2 requires `runs/feature_fusion/independent_test/predictions_early_fusion.csv` — run `independent_test_eval.py` first.
+
+Checkpoints auto-saved to `data/code_validation_checkpoint.json` and `data/ai_disc_independent_checkpoint.json` — safe to interrupt and resume.
 
 ---
 
@@ -169,6 +189,8 @@ python src/run_code_validation.py
 | `data/apps_inference_raw.jsonl` | Apps for inference / independent test set |
 | `data/inference_manual.csv` | Ground-truth labels for 110-app test set (`pkg_name`, `label`) |
 | `data/inter_annotator.csv` | IAA data (`app_id`, `annotator1`, `annotator2`) |
+| `data/code_validation_apps.csv` | 80-app code-validation set (`pkg_name`, `listing_label`) |
+| `data/androzoo_latest.csv` | Androzoo metadata for APK lookup (code-level validation only) |
 | `data/images/{app_id}/*.png` | Screenshots (auto-downloaded by Step 0 if missing) |
 
 ---
@@ -187,7 +209,7 @@ runs/feature_fusion/
 │   ├── late_fusion_stacking/
 │   ├── late_fusion_soft_voting/
 │   └── late_fusion_score_max/
-├── independent_test/             ← predictions_*.csv, independent_test.json
+├── independent_test/             ← predictions_*.csv, independent_test.json, baseline_*.json
 ├── statistical_tests/            ← summary.csv, results.json
 ├── branch_complementarity/
 ├── disagreement_accuracy/

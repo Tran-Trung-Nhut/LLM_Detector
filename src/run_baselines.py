@@ -16,17 +16,23 @@ from utils.runner import run_step, print_summary
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--all",        action="store_true")
-    parser.add_argument("--skip-qwen",  action="store_true")
-    parser.add_argument("--skip-e2e",   action="store_true")
-    parser.add_argument("--skip-local", action="store_true")
-    parser.add_argument("--no-latency", action="store_true")
+    parser.add_argument("--all",             action="store_true")
+    parser.add_argument("--skip-tfidf-svm", action="store_true")
+    parser.add_argument("--skip-qwen",      action="store_true")
+    parser.add_argument("--skip-e2e",       action="store_true")
+    parser.add_argument("--skip-local",     action="store_true")
+    parser.add_argument("--no-latency",     action="store_true")
     args = parser.parse_args()
 
     has_openai = bool(os.environ.get("OPENAI_API_KEY"))
     results = {}
 
     if not args.skip_local:
+        if not args.skip_tfidf_svm:
+            results["TF-IDF+SVM"] = run_step(
+                "TF-IDF + linear SVM — description-only",
+                "steps.baselines.baseline_tfidf_svm",
+            )
         if not args.skip_qwen:
             results["Qwen2.5-7B"] = run_step(
                 "Qwen2.5-7B — description-only zero-shot",

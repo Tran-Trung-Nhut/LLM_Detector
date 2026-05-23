@@ -157,6 +157,7 @@ def main():
 
     test_dir = Path(CFG.runs_dir) / CFG.run_name / "independent_test"
     baseline_latency_files = {
+        "TF-IDF + linear SVM":              test_dir / "baseline_tfidf_svm.json",
         "Qwen2.5-7B (desc. only)":         test_dir / "baseline_qwen.json",
         "GPT-4o-mini (zero-shot)":          test_dir / "baseline_mllm_zeroshot_gpt_4o_mini.json",
         "GPT-4o (6-shot)":                  test_dir / "baseline_mllm_fewshot_gpt4o.json",

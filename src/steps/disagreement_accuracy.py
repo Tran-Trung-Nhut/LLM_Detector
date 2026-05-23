@@ -89,7 +89,6 @@ def main():
 
     write_json(out_dir / "table11_disagree_accuracy.json", results)
     print(f"\nSaved: {out_dir}")
-    print(f"Paper reference: Soft Voting should reach ~0.741 on 54-app disagreement set.")
 
 
 if __name__ == "__main__":

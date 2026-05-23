@@ -32,12 +32,6 @@ AI_DISC_CLI = _PROJECT_ROOT / "AIApp-custom" / "identification" / "ai_discrimina
 AI_DISC_BIN = f"python {AI_DISC_CLI}"
 APKTOOL_JAR = _PROJECT_ROOT / "AIApp-custom" / "identification" / "apktool_2.5.0.jar"
 
-PAPER_REF = {
-    "code_val": {"tp": 8,  "fn": 32, "tn": 35, "fp": 5},
-    "ind_test":  {"tp": 9,  "fn": 35, "tn": 59, "fp": 7,
-                  "ai_disc_f1": 0.300, "ef_f1": 0.878},
-}
-
 
 def load_pkg2sha(target_pkgs: set) -> dict:
     pkg2sha, pkg2date = {}, {}
@@ -158,11 +152,10 @@ def _compute_row(df: pd.DataFrame) -> dict:
     )
 
 
-def _print_row(label: str, r: dict, ref: dict):
+def _print_row(label: str, r: dict):
     print(f"\n{label}")
     print(f"  {'':12} {'TP':>4} {'FN':>4} {'TN':>4} {'FP':>4} {'F1':>6} {'κ':>6}")
     print(f"  {'Computed':<12} {r['tp']:>4} {r['fn']:>4} {r['tn']:>4} {r['fp']:>4} {r['f1']:>6.3f} {r['kappa']:>6.3f}")
-    print(f"  {'Paper ref':<12} {ref['tp']:>4} {ref['fn']:>4} {ref['tn']:>4} {ref['fp']:>4}")
 
 
 def _load_ef_predictions(pkg_names: list) -> dict:
@@ -176,6 +169,22 @@ def _load_ef_predictions(pkg_names: list) -> dict:
     return {pkg: pred_map[pkg] for pkg in pkg_names if pkg in pred_map}
 
 
+def _save_metrics(label: str, r: dict, extra: dict | None = None):
+    out_path = Path(CFG.runs_dir) / "cohen_kappa" / "validation.txt"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    mode = "a" if out_path.exists() else "w"
+    with open(out_path, mode) as f:
+        slug = label.lower().replace(" ", "_").replace("(", "").replace(")", "").replace("=", "")
+        f.write(f"[{label}]\n")
+        f.write(f"tp={r['tp']} fn={r['fn']} tn={r['tn']} fp={r['fp']}\n")
+        f.write(f"f1={r['f1']:.3f}\n")
+        f.write(f"kappa={r['kappa']:.3f}\n")
+        if extra:
+            for k, v in extra.items():
+                f.write(f"{k}={v}\n")
+        f.write("\n")
+
+
 def phase1(api_key: str):
     _assert_androzoo()
     apps = []
@@ -186,7 +195,9 @@ def phase1(api_key: str):
 
     path = Path(CFG.code_validation_csv)
     if path.exists():
-        _print_row("Code-validation (N=80)", _compute_row(pd.read_csv(path)), PAPER_REF["code_val"])
+        r = _compute_row(pd.read_csv(path))
+        _print_row("Code-validation (N=80)", r)
+        _save_metrics("Code-validation (N=80)", r)
 
 
 def phase2(api_key: str):
@@ -202,10 +213,10 @@ def phase2(api_key: str):
         return
     df  = pd.read_csv(path)
     r   = _compute_row(df)
-    ref = PAPER_REF["ind_test"]
-    _print_row("Independent test (N=110)", r, ref)
+    _print_row("Independent test (N=110)", r)
 
     ef_preds = _load_ef_predictions(df["pkg_name"].tolist())
+    extra = {}
     if ef_preds:
         common    = [p for p in df["pkg_name"] if p in ef_preds]
         y_true_ef = np.array([ef_preds[p]["y_true"] for p in common])
@@ -215,7 +226,8 @@ def phase2(api_key: str):
         print(f"\n  On {len(common)} identical apps:")
         print(f"  {'':20} {'AI Disc':>8} {'EF':>8}")
         print(f"  {'Computed F1':<20} {r['f1']:>8.3f} {ef_f1:>8.3f}")
-        print(f"  {'Paper ref F1':<20} {ref['ai_disc_f1']:>8.3f} {ref['ef_f1']:>8.3f}")
+        extra = {"ef_f1": f"{ef_f1:.3f}", "n_identical": len(common)}
+    _save_metrics("Independent test (N=110)", r, extra)
 
 
 def _require_api_key() -> str:

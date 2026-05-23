@@ -147,6 +147,10 @@ Score:"""
         "Shopping", "Travel & Local", "Medical", "Music & Audio", "Photography",
     )
 
+    tfidf_svm_ngram_range: tuple = (1, 2)
+    tfidf_svm_max_features: int = 20_000
+    tfidf_svm_C: float = 1.0
+
     iaa_csv: str = "data/inter_annotator.csv"
     code_validation_csv: str = "data/code_validation.csv"
     ai_disc_independent_csv: str = "data/ai_disc_independent.csv"
