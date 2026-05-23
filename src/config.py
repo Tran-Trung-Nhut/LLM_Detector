@@ -149,6 +149,7 @@ Score:"""
 
     iaa_csv: str = "data/inter_annotator.csv"
     code_validation_csv: str = "data/code_validation.csv"
+    ai_disc_independent_csv: str = "data/ai_disc_independent.csv"
     n_bootstrap: int = 2000
     disagree_threshold: float = 0.3
     prior_pi_values: tuple = (0.005, 0.01, 0.05)
