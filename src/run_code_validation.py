@@ -147,6 +147,7 @@ def _compute_row(df: pd.DataFrame) -> dict:
     tn, fp, fn, tp = confusion_matrix(ref, pred, labels=[0, 1]).ravel()
     return dict(
         n=len(df), kappa=cohen_kappa_score(ref, pred),
+        pct=float((ref == pred).mean()) * 100,
         f1=f1_score(ref, pred, pos_label=1, zero_division=0),
         tp=int(tp), fp=int(fp), fn=int(fn), tn=int(tn),
     )
@@ -154,8 +155,8 @@ def _compute_row(df: pd.DataFrame) -> dict:
 
 def _print_row(label: str, r: dict):
     print(f"\n{label}")
-    print(f"  {'':12} {'TP':>4} {'FN':>4} {'TN':>4} {'FP':>4} {'F1':>6} {'κ':>6}")
-    print(f"  {'Computed':<12} {r['tp']:>4} {r['fn']:>4} {r['tn']:>4} {r['fp']:>4} {r['f1']:>6.3f} {r['kappa']:>6.3f}")
+    print(f"  {'':12} {'TP':>4} {'FN':>4} {'TN':>4} {'FP':>4} {'F1':>6} {'κ':>6} {'Agree':>7}")
+    print(f"  {'Computed':<12} {r['tp']:>4} {r['fn']:>4} {r['tn']:>4} {r['fp']:>4} {r['f1']:>6.3f} {r['kappa']:>6.3f} {r['pct']:>6.1f}%")
 
 
 def _load_ef_predictions(pkg_names: list) -> dict:
@@ -179,6 +180,7 @@ def _save_metrics(label: str, r: dict, extra: dict | None = None):
         f.write(f"tp={r['tp']} fn={r['fn']} tn={r['tn']} fp={r['fp']}\n")
         f.write(f"f1={r['f1']:.3f}\n")
         f.write(f"kappa={r['kappa']:.3f}\n")
+        f.write(f"agreement={r['pct']:.1f}%\n")
         if extra:
             for k, v in extra.items():
                 f.write(f"{k}={v}\n")
