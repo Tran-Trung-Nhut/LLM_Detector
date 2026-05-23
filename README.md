@@ -1,6 +1,6 @@
 # LLMDroid
 
-**Multimodal screening for LLM-integrated Android apps — no APK required.**
+**APK-Free screening for LLM-integrated Android apps.**
 
 LLMDroid flags likely LLM-powered apps using only public app-store metadata: text descriptions and promotional screenshots.
 
@@ -216,17 +216,4 @@ python src/train_pipeline.py --train-only
 python src/steps/independent_test_eval.py
 python src/run_analysis.py
 python src/run_baselines.py
-```
-
----
-
-## Citation
-
-```bibtex
-@article{llmdroid2026,
-  title   = {LLMDroid: A Multimodal Framework for LLM Integration Detection
-             in Mobile Apps Using Textual and Visual App Store Data},
-  year    = {2026},
-  note    = {Under review}
-}
 ```
