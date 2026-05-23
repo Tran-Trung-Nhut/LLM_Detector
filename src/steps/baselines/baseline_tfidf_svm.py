@@ -38,7 +38,7 @@ def main():
 
     train_rows = read_jsonl(CFG.dataset_path)
     X_train    = _texts(train_rows)
-    y_train    = np.array([r["label"] for r in train_rows], dtype=int)
+    y_train    = np.array([r["label_binary"] for r in train_rows], dtype=int)
 
     test_rows = read_jsonl(CFG.raw_inference_dataset_path)
     test_ids  = [r["app_id"] for r in test_rows]
